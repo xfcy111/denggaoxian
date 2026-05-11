@@ -7,9 +7,27 @@ function h(type, x, z, overrides) {
   return core.heightAt(type, x, z, overrides);
 }
 
-test("terrain library exposes the six required landform types", () => {
-  const ids = core.TERRAIN_TYPES.map((item) => item.id);
+test("terrain library keeps the six original landform types first", () => {
+  const ids = core.TERRAIN_TYPES.map((item) => item.id).slice(0, 6);
   assert.deepEqual(ids, ["peak", "basin", "ridge", "valley", "saddle", "cliff"]);
+});
+
+test("terrain library exposes A, B, and C teaching mode landform types", () => {
+  const ids = core.TERRAIN_TYPES.map((item) => item.id);
+  assert.deepEqual(ids, [
+    "peak",
+    "basin",
+    "ridge",
+    "valley",
+    "saddle",
+    "cliff",
+    "plain",
+    "hills",
+    "mountain",
+    "plateau",
+    "large_basin",
+    "reservoir_site",
+  ]);
 });
 
 test("peak and basin have opposite closed-contour height logic", () => {
@@ -58,9 +76,32 @@ test("contourSegments returns drawable marching-squares line segments", () => {
 
 test("terrain metadata binds each landform to its planned reference card", () => {
   for (const item of core.TERRAIN_TYPES) {
-    assert.match(item.card, /^A[1-6]_/);
+    assert.match(item.card, /^[ABC][1-6]_/);
     assert.ok(item.label.length >= 2);
     assert.ok(item.rule.length >= 4);
+    assert.match(item.mode, /^(landform|terrainType|application)$/);
   }
 });
 
+test("plain, hills, and mountain encode increasing relief and elevation", () => {
+  const plain = core.sampleGrid("plain", 41);
+  const hills = core.sampleGrid("hills", 41);
+  const mountain = core.sampleGrid("mountain", 41);
+  assert.ok(plain.max < 220);
+  assert.ok(hills.min >= 180 && hills.max <= 540);
+  assert.ok(mountain.max > 1000);
+  assert.ok(mountain.max - mountain.min > hills.max - hills.min);
+});
+
+test("plateau is high and flatter inside than near the margin", () => {
+  const center = Math.abs(h("plateau", 0, 0) - h("plateau", 0.2, 0.1));
+  const edge = Math.abs(h("plateau", 0.78, 0) - h("plateau", 1, 0));
+  assert.ok(h("plateau", 0, 0) > 850);
+  assert.ok(edge > center * 2);
+});
+
+test("large basin and reservoir site preserve application teaching logic", () => {
+  assert.ok(h("large_basin", 0, 0) < h("large_basin", 0.85, 0.85));
+  assert.ok(h("reservoir_site", -0.45, 0) < h("reservoir_site", 0.55, 0.62));
+  assert.ok(h("reservoir_site", 0.1, 0) < h("reservoir_site", 0.1, 0.8));
+});

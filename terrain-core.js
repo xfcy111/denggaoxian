@@ -8,6 +8,7 @@
   const TERRAIN_TYPES = [
     {
       id: "peak",
+      mode: "landform",
       label: "山峰",
       card: "A1_peak",
       rule: "闭合等高线，中间高、四周低",
@@ -15,6 +16,7 @@
     },
     {
       id: "basin",
+      mode: "landform",
       label: "盆地",
       card: "A2_basin",
       rule: "闭合等高线，中间低、四周高",
@@ -22,6 +24,7 @@
     },
     {
       id: "ridge",
+      mode: "landform",
       label: "山脊",
       card: "A3_ridge",
       rule: "等高线凸向低值，常为分水岭",
@@ -29,6 +32,7 @@
     },
     {
       id: "valley",
+      mode: "landform",
       label: "山谷",
       card: "A4_valley",
       rule: "等高线凸向高值，常发育河流",
@@ -36,6 +40,7 @@
     },
     {
       id: "saddle",
+      mode: "landform",
       label: "鞍部",
       card: "A5_saddle",
       rule: "两个山顶之间的低缓通道",
@@ -43,10 +48,59 @@
     },
     {
       id: "cliff",
+      mode: "landform",
       label: "陡崖",
       card: "A6_cliff",
       rule: "多条不同高度等高线重合",
       proverb: "重合多线是陡崖",
+    },
+    {
+      id: "plain",
+      mode: "terrainType",
+      label: "平原",
+      card: "B1_plain",
+      rule: "海拔低于 200m，等高线稀疏，地势平坦",
+      proverb: "低而平，线稀疏",
+    },
+    {
+      id: "hills",
+      mode: "terrainType",
+      label: "丘陵",
+      card: "B2_hills",
+      rule: "海拔 200-500m，起伏和缓，坡度较小",
+      proverb: "起伏小，坡度缓",
+    },
+    {
+      id: "mountain",
+      mode: "terrainType",
+      label: "山地",
+      card: "B3_mountain",
+      rule: "海拔高，坡陡谷深，等高线密集",
+      proverb: "线密坡陡，高差大",
+    },
+    {
+      id: "plateau",
+      mode: "terrainType",
+      label: "高原",
+      card: "B4_plateau",
+      rule: "海拔高，内部平坦，边缘陡峭",
+      proverb: "顶平边陡",
+    },
+    {
+      id: "large_basin",
+      mode: "terrainType",
+      label: "大盆地",
+      card: "B5_large_basin",
+      rule: "四周高、中间低，常见向心状水系",
+      proverb: "四周高，中间低",
+    },
+    {
+      id: "reservoir_site",
+      mode: "application",
+      label: "水库坝址",
+      card: "C1_reservoir_site",
+      rule: "口小肚大，坝址横跨峡谷窄口，库区位于上游",
+      proverb: "坝修窄口，库蓄宽肚",
     },
   ];
 
@@ -64,6 +118,11 @@
     const dx = (x - cx) / sx;
     const dz = (z - cz) / sz;
     return Math.exp(-(dx * dx + dz * dz));
+  }
+
+  function smoothstep(edge0, edge1, value) {
+    const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
+    return t * t * (3 - 2 * t);
   }
 
   function resolveParams(overrides) {
@@ -118,11 +177,58 @@
         height = 150 + relief * (gentleSlope + cliffStep + corrugation);
         break;
       }
+      case "plain": {
+        const tilt = 42 * ((x + z + 2) / 4);
+        const undulation = 7 * Math.sin((x - z) * Math.PI) + 5 * Math.cos(z * Math.PI * 1.2);
+        height = 62 + relief * (tilt + undulation);
+        break;
+      }
+      case "hills": {
+        const hillA = 175 * gaussian(x, z, -0.46, -0.18, 0.32, 0.36);
+        const hillB = 150 * gaussian(x, z, 0.38, 0.34, 0.34, 0.32);
+        const hillC = 105 * gaussian(x, z, 0.08, -0.58, 0.42, 0.26);
+        const lowSwale = 26 * gaussian(x, z, -0.02, 0.12, 0.28, 0.7);
+        height = 215 + relief * (hillA + hillB + hillC - lowSwale);
+        break;
+      }
+      case "mountain": {
+        const peakA = 880 * gaussian(x, z, -0.32, -0.2, 0.26, 0.32);
+        const peakB = 790 * gaussian(x, z, 0.42, 0.36, 0.3, 0.28);
+        const ridgeArm = 350 * Math.exp(-Math.pow(z + 0.22 * x, 2) / 0.035);
+        const valleyA = 270 * Math.exp(-Math.pow(x + 0.68, 2) / 0.035);
+        const valleyB = 220 * Math.exp(-Math.pow(x - 0.05, 2) / 0.045) * ((z + 1) / 2);
+        height = 460 + relief * (peakA + peakB + ridgeArm - valleyA - valleyB);
+        break;
+      }
+      case "plateau": {
+        const r = Math.sqrt(x * x + z * z);
+        const edgeDrop = 790 * smoothstep(0.58, 0.96, r);
+        const interior = 18 * Math.sin(x * Math.PI * 1.1) + 12 * Math.cos(z * Math.PI * 0.9);
+        height = 1005 - relief * edgeDrop + interior * (1 - smoothstep(0.42, 0.72, r));
+        break;
+      }
+      case "large_basin": {
+        const floor = 650 * gaussian(x, z, 0, 0, 0.7, 0.66);
+        const rim = 150 * Math.max(Math.abs(x), Math.abs(z));
+        const cornerHigh = 95 * gaussian(Math.abs(x), Math.abs(z), 0.86, 0.86, 0.38, 0.38);
+        height = 940 - relief * floor + rim + cornerHigh;
+        break;
+      }
+      case "reservoir_site": {
+        const downstream = (z + 1) / 2;
+        const valleyWidth = 0.08 + 0.34 * smoothstep(-0.1, 0.85, z);
+        const valleyFloor = 360 * Math.exp(-(x * x) / (valleyWidth * valleyWidth));
+        const sideHills = 320 * Math.pow(Math.abs(x), 1.35);
+        const upstreamRim = 340 * smoothstep(0.28, 0.95, z);
+        const pocketLow = 115 * gaussian(x, z, -0.18, 0.45, 0.48, 0.34);
+        height = 260 + sideHills + upstreamRim + 110 * downstream - relief * (valleyFloor + pocketLow);
+        break;
+      }
       default:
         throw new Error(`Unknown terrain type: ${type}`);
     }
 
-    return clamp(height * params.verticalScale, 20, 920);
+    return clamp(height * params.verticalScale, 20, 1600);
   }
 
   function sampleGrid(type, size, overrides) {
@@ -233,4 +339,3 @@
     sampleGrid,
   };
 });
-

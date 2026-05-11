@@ -77,7 +77,7 @@
 
     .topbar {
       display: grid;
-      grid-template-columns: minmax(230px, 1fr) auto auto;
+      grid-template-columns: minmax(230px, 1fr) auto auto auto;
       align-items: center;
       gap: 16px;
       padding: 14px 18px;
@@ -105,6 +105,7 @@
       line-height: 1.35;
     }
 
+    .mode-switcher,
     .terrain-switcher,
     .view-switcher,
     .utility-actions {
@@ -114,6 +115,7 @@
       gap: 7px;
     }
 
+    .mode-button,
     .terrain-button,
     .view-button,
     .utility-button {
@@ -128,6 +130,7 @@
       white-space: nowrap;
     }
 
+    .mode-button:hover,
     .terrain-button:hover,
     .view-button:hover,
     .utility-button:hover {
@@ -135,6 +138,7 @@
       border-color: var(--accent);
     }
 
+    .mode-button.is-active,
     .terrain-button.is-active,
     .view-button.is-active {
       background: var(--accent);
@@ -448,7 +452,13 @@
         <p>教师大屏讲解优先 · 解析函数负责几何真相 · GPT 图片负责教材参考</p>
       </div>
 
-      <nav class="terrain-switcher" aria-label="地形部位切换">
+      <nav class="mode-switcher" aria-label="教学模式切换">
+        <button class="mode-button is-active" type="button" data-mode="landform">部位判读</button>
+        <button class="mode-button" type="button" data-mode="terrainType">地形类型</button>
+        <button class="mode-button" type="button" data-mode="application" data-card="C1_reservoir_site">应用选址</button>
+      </nav>
+
+      <nav class="terrain-switcher" aria-label="当前模式项目切换">
         <button class="terrain-button is-active" type="button" data-terrain="peak">山峰</button>
         <button class="terrain-button" type="button" data-terrain="basin">盆地</button>
         <button class="terrain-button" type="button" data-terrain="ridge">山脊</button>
@@ -547,9 +557,32 @@
       const terrainCanvas = document.getElementById("terrainCanvas");
       const contourCanvas = document.getElementById("contourCanvas");
       const referenceCanvas = document.getElementById("referenceCanvas");
-      const terrainButtons = Array.from(document.querySelectorAll("[data-terrain]"));
+      const terrainSwitcher = document.querySelector(".terrain-switcher");
+      const modeButtons = Array.from(document.querySelectorAll("[data-mode]"));
+      let terrainButtons = Array.from(document.querySelectorAll("[data-terrain]"));
       const viewButtons = Array.from(document.querySelectorAll("[data-view]"));
+      const MODE_META = {
+        landform: {
+          label: "部位判读",
+          ids: ["peak", "basin", "ridge", "valley", "saddle", "cliff"],
+          slogans: ["凸高为谷，凸低为脊", "密陡疏缓", "大于大的，小于小的"],
+          note: "先判断等高线数值变化，再判断弯曲方向和疏密。",
+        },
+        terrainType: {
+          label: "地形类型",
+          ids: ["plain", "hills", "mountain", "plateau", "large_basin"],
+          slogans: ["低平线疏", "线密坡陡", "顶平边陡"],
+          note: "用海拔、高差、线距和整体形态区分五类地形。",
+        },
+        application: {
+          label: "应用选址",
+          ids: ["reservoir_site"],
+          slogans: ["口小肚大", "坝修窄口", "库在上游"],
+          note: "水库坝址先找峡谷窄口，再看上游是否有宽阔库区。",
+        },
+      };
       const state = {
+        mode: "landform",
         terrain: "peak",
         theme: "exam",
         relief: 1,
@@ -591,8 +624,23 @@
         return core.TERRAIN_TYPES.find((item) => item.id === state.terrain);
       }
 
+      function currentMode() {
+        return MODE_META[state.mode];
+      }
+
+      function renderTerrainButtons() {
+        const mode = currentMode();
+        terrainSwitcher.setAttribute("aria-label", `${mode.label}项目切换`);
+        terrainSwitcher.innerHTML = mode.ids.map((id) => {
+          const meta = core.TERRAIN_TYPES.find((item) => item.id === id);
+          const active = id === state.terrain ? " is-active" : "";
+          return `<button class="terrain-button${active}" type="button" data-terrain="${meta.id}">${meta.label}</button>`;
+        }).join("");
+        terrainButtons = Array.from(terrainSwitcher.querySelectorAll("[data-terrain]"));
+      }
+
       function heightToY(height) {
-        return (height - 120) / 95;
+        return (height - 120) / 130;
       }
 
       function getThemeColors() {
@@ -997,7 +1045,110 @@
           ctx.stroke();
           label(ctx, "陡崖", p1.x + 34 * window.devicePixelRatio, height * 0.5, colors);
         }
+
+        if (state.terrain === "plain") {
+          label(ctx, "平原 < 200m", width * 0.5, height * 0.18, colors);
+        }
+
+        if (state.terrain === "hills") {
+          for (const point of [[-0.42, -0.2], [0.38, 0.32], [0.05, -0.58]]) {
+            const p = toCanvas(point[0], point[1], width, height);
+            drawTriangle(ctx, p.x, p.y - 5, 8 * window.devicePixelRatio, colors.accent2);
+          }
+          label(ctx, "丘陵 200-500m", width * 0.5, height * 0.16, colors);
+        }
+
+        if (state.terrain === "mountain") {
+          for (const point of [[-0.32, -0.2], [0.42, 0.36]]) {
+            const p = toCanvas(point[0], point[1], width, height);
+            drawTriangle(ctx, p.x, p.y - 8, 12 * window.devicePixelRatio, colors.accent2);
+          }
+          label(ctx, "山地 > 500m", width * 0.52, height * 0.13, colors);
+        }
+
+        if (state.terrain === "plateau") {
+          label(ctx, "高原面", width * 0.5, height * 0.48, colors);
+          label(ctx, "陡缘", width * 0.78, height * 0.28, colors);
+        }
+
+        if (state.terrain === "large_basin") {
+          const center = toCanvas(0, 0, width, height);
+          ctx.strokeStyle = colors.blue;
+          ctx.lineWidth = 2 * window.devicePixelRatio;
+          for (let i = 0; i < 8; i += 1) {
+            const angle = (Math.PI * 2 * i) / 8;
+            const start = {
+              x: center.x + Math.cos(angle) * width * 0.32,
+              y: center.y + Math.sin(angle) * height * 0.3,
+            };
+            const end = {
+              x: center.x + Math.cos(angle) * width * 0.1,
+              y: center.y + Math.sin(angle) * height * 0.09,
+            };
+            drawArrow(ctx, start.x, start.y, end.x, end.y, colors.blue);
+          }
+          label(ctx, "向心水系", center.x, center.y + 28 * window.devicePixelRatio, colors);
+        }
+
+        if (state.terrain === "reservoir_site") {
+          ctx.fillStyle = colorWithAlpha(colors.blue, 0.22);
+          ctx.beginPath();
+          const reservoir = [
+            toCanvas(-0.48, -0.72, width, height),
+            toCanvas(0.42, -0.68, width, height),
+            toCanvas(0.58, -0.28, width, height),
+            toCanvas(0.22, 0.12, width, height),
+            toCanvas(-0.1, 0.28, width, height),
+            toCanvas(-0.46, 0.02, width, height),
+          ];
+          reservoir.forEach((p, index) => {
+            if (index === 0) ctx.moveTo(p.x, p.y);
+            else ctx.lineTo(p.x, p.y);
+          });
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.strokeStyle = colors.blue;
+          ctx.lineWidth = 3 * window.devicePixelRatio;
+          ctx.beginPath();
+          const river = [toCanvas(0.02, -0.82, width, height), toCanvas(0, -0.28, width, height), toCanvas(0.02, 0.16, width, height), toCanvas(0, 0.88, width, height)];
+          river.forEach((p, index) => {
+            if (index === 0) ctx.moveTo(p.x, p.y);
+            else ctx.lineTo(p.x, p.y);
+          });
+          ctx.stroke();
+
+          const damA = toCanvas(-0.22, 0.16, width, height);
+          const damB = toCanvas(0.22, 0.16, width, height);
+          ctx.strokeStyle = colors.danger;
+          ctx.setLineDash([9 * window.devicePixelRatio, 7 * window.devicePixelRatio]);
+          ctx.beginPath();
+          ctx.moveTo(damA.x, damA.y);
+          ctx.lineTo(damB.x, damB.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          label(ctx, "拟建坝址", width * 0.62, height * 0.58, colors);
+          label(ctx, "库区", width * 0.46, height * 0.28, colors);
+          label(ctx, "河流", width * 0.55, height * 0.74, colors);
+        }
         ctx.restore();
+      }
+
+      function drawArrow(ctx, x1, y1, x2, y2, color) {
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const head = 8 * window.devicePixelRatio;
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - Math.cos(angle - 0.55) * head, y2 - Math.sin(angle - 0.55) * head);
+        ctx.lineTo(x2 - Math.cos(angle + 0.55) * head, y2 - Math.sin(angle + 0.55) * head);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
       }
 
       function drawTriangle(ctx, x, y, size, color) {
@@ -1189,22 +1340,42 @@
       function updateCopy() {
         const meta = currentMeta();
         const titlePrefix = meta.card.split("_")[0];
+        const mode = currentMode();
         byId("cardTitle").textContent = `${titlePrefix} ${meta.label}参考卡`;
         byId("terrainName").textContent = meta.label;
         byId("terrainRule").textContent = meta.rule;
-        byId("teacherNote").innerHTML = `<strong>当前讲解：</strong>${meta.proverb}。`;
+        byId("teacherNote").innerHTML = `<strong>${mode.label}：</strong>${meta.proverb}。${mode.note}`;
         byId("contourStatus").textContent = `等高距 ${state.interval}m`;
         byId("legendPrimary").textContent = meta.rule;
-        byId("legendSecondary").textContent = `${meta.label}、2D 等高线和切面轨迹共用同一个 h(x,z)。`;
+        byId("legendSecondary").textContent = `${mode.label}中的 ${meta.label}、2D 等高线和切面轨迹共用同一个 h(x,z)。`;
+        byId("scalePill").textContent = state.mode === "application" ? "示范：坝址线 / 库区 / 河流" : "比例尺：示意 1格≈200m";
+        renderSlogans(mode);
+      }
+
+      function renderSlogans(mode) {
+        const row = document.querySelector(".slogan-row");
+        row.innerHTML = mode.slogans.map((text) => `<span class="slogan">${text}</span>`).join("");
       }
 
       function bindEvents() {
-        terrainButtons.forEach((button) => {
+        modeButtons.forEach((button) => {
           button.addEventListener("click", function () {
-            state.terrain = button.dataset.terrain;
-            terrainButtons.forEach((item) => item.classList.toggle("is-active", item === button));
+            state.mode = button.dataset.mode;
+            const mode = currentMode();
+            state.terrain = mode.ids[0];
+            modeButtons.forEach((item) => item.classList.toggle("is-active", item === button));
+            renderTerrainButtons();
+            resetView();
             updateScene();
           });
+        });
+
+        terrainSwitcher.addEventListener("click", function (event) {
+          const button = event.target.closest("[data-terrain]");
+          if (!button) return;
+          state.terrain = button.dataset.terrain;
+          terrainButtons.forEach((item) => item.classList.toggle("is-active", item === button));
+          updateScene();
         });
 
         viewButtons.forEach((button) => {
@@ -1255,6 +1426,7 @@
         };
       }
 
+      renderTerrainButtons();
       bindEvents();
       initThree();
     })();

@@ -32,6 +32,34 @@ A5_saddle_raw.png <- C:\Users\xl\.codex\generated_images\019e15a9-2bfb-7261-8a81
 A6_cliff_raw.png <- C:\Users\xl\.codex\generated_images\019e15a9-2bfb-7261-8a81-6ba133d963a2\ig_00a2c8e67f6af560016a0183b12b788191897144befbf4f274.png
 ```
 
+## B1-B5、C1 入库记录
+
+- Date: 2026-05-11
+- Tool: Codex built-in image generation
+- QC status: PASS for first classroom prototype
+- Re-prompt history: none
+- Notes: B1-B5、C1 均按本轮“新教学模式扩展”计划生成；页面使用 `images/processed/*.webp`，原始 PNG 保留在 `images/gpt-raw/`。
+
+| Card | Raw file | Processed file | QC summary |
+|---|---|---|---|
+| B1_plain | `images/gpt-raw/B1_plain_raw.png` | `images/processed/B1_plain.webp` | 低于 200m、等高线稀疏且近直线，平原地貌清楚 |
+| B2_hills | `images/gpt-raw/B2_hills_raw.png` | `images/processed/B2_hills.webp` | 200-500m 闭合小丘，多处圆缓丘陵，线距适中 |
+| B3_mountain | `images/gpt-raw/B3_mountain_raw.png` | `images/processed/B3_mountain.webp` | 高于 500m、等高线密集，双峰、深谷和山脊清楚 |
+| B4_plateau | `images/gpt-raw/B4_plateau_raw.png` | `images/processed/B4_plateau.webp` | 高原面稀疏、边缘密集，平顶高地与陡缘标注清楚 |
+| B5_large_basin | `images/gpt-raw/B5_large_basin_raw.png` | `images/processed/B5_large_basin.webp` | 四周高中心低，向心水系和盆地中心标注清楚 |
+| C1_reservoir_site | `images/gpt-raw/C1_reservoir_site_raw.png` | `images/processed/C1_reservoir_site.webp` | 窄口宽肚，坝线横跨河谷窄口，库区在上游 |
+
+### 实际生成源文件
+
+```text
+B1_plain_raw.png <- C:\Users\xl\.codex\generated_images\019e15a9-2bfb-7261-8a81-6ba133d963a2\ig_058bbd775f5066a9016a018d3ebd3081918b1b929819446e3c.png
+B2_hills_raw.png <- C:\Users\xl\.codex\generated_images\019e15a9-2bfb-7261-8a81-6ba133d963a2\ig_058bbd775f5066a9016a018da27d2081919ce4ac1ba04546ea.png
+B3_mountain_raw.png <- C:\Users\xl\.codex\generated_images\019e15a9-2bfb-7261-8a81-6ba133d963a2\ig_058bbd775f5066a9016a018e123f0481919ac30c2b3586723d.png
+B4_plateau_raw.png <- C:\Users\xl\.codex\generated_images\019e15a9-2bfb-7261-8a81-6ba133d963a2\ig_058bbd775f5066a9016a018e9934c081918d2551bcb81433e5.png
+B5_large_basin_raw.png <- C:\Users\xl\.codex\generated_images\019e15a9-2bfb-7261-8a81-6ba133d963a2\ig_058bbd775f5066a9016a018f1013fc8191a2f71f0ae710892f.png
+C1_reservoir_site_raw.png <- C:\Users\xl\.codex\generated_images\019e15a9-2bfb-7261-8a81-6ba133d963a2\ig_058bbd775f5066a9016a018f7fd75481918aad97fce8c01305.png
+```
+
 ## 全局 QC 清单
 
 - 数值单调性：海拔值沿预期方向单调变化。
