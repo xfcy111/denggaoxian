@@ -46,3 +46,27 @@ test("contour.html includes the teacher-facing slogans from the plan", () => {
   assert.match(html, /密陡疏缓/);
   assert.match(html, /大于大的，小于小的/);
 });
+
+test("contour.html turns slogans into clickable verification controls", () => {
+  const html = fs.readFileSync(htmlPath, "utf8");
+  assert.match(html, /data-slogan="bend"/);
+  assert.match(html, /data-slogan="slope"/);
+  assert.match(html, /data-slogan="closed"/);
+  assert.match(html, /口诀验证/);
+  assert.match(html, /activeSlogan/);
+});
+
+test("contour.html supports 2D contour click linking into 3D", () => {
+  const html = fs.readFileSync(htmlPath, "utf8");
+  assert.match(html, /id="pointReadout"/);
+  assert.match(html, /handleContourClick/);
+  assert.match(html, /drawSelectedPoint/);
+  assert.match(html, /updateSelectionMarker/);
+  assert.match(html, /已点选/);
+});
+
+test("contour.html explains overhead view as the source of contour lines", () => {
+  const html = fs.readFileSync(htmlPath, "utf8");
+  assert.match(html, /俯视图就是等高线图的空间来源/);
+  assert.match(html, /updateViewCopy/);
+});

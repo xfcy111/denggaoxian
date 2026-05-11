@@ -368,6 +368,30 @@
       background: color-mix(in srgb, var(--paper) 90%, transparent);
       font-size: 13px;
       white-space: nowrap;
+      color: var(--ink);
+      cursor: pointer;
+      transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .slogan:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .slogan.is-active {
+      background: var(--contour-strong);
+      border-color: var(--contour-strong);
+      color: var(--paper);
+    }
+
+    .point-readout {
+      border: 1px dashed color-mix(in srgb, var(--accent) 48%, var(--line));
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      color: var(--muted);
+      background: color-mix(in srgb, var(--paper) 86%, transparent);
+      font-size: 12px;
+      line-height: 1.45;
     }
 
     .teacher-note {
@@ -525,6 +549,7 @@
           <div class="canvas-frame">
             <canvas id="contourCanvas" width="900" height="720" aria-label="2D 等高线卷面图"></canvas>
           </div>
+          <div class="point-readout" id="pointReadout">点击 2D 等高线图任意位置；已点选后会在 2D 与 3D 中同步标出同一点及海拔。</div>
           <ul class="legend-list">
             <li><span class="dot"></span><span id="legendPrimary">同一高度点连成线，数值向山顶递增。</span></li>
             <li><span class="dot orange"></span><span>计曲线加粗，投屏时优先读粗线数字。</span></li>
@@ -540,9 +565,9 @@
 
     <footer class="teacher-strip">
       <div class="slogan-row" aria-label="读图口诀">
-        <span class="slogan">凸高为谷，凸低为脊</span>
-        <span class="slogan">密陡疏缓</span>
-        <span class="slogan">大于大的，小于小的</span>
+        <button class="slogan" type="button" data-slogan="bend">凸高为谷，凸低为脊</button>
+        <button class="slogan" type="button" data-slogan="slope">密陡疏缓</button>
+        <button class="slogan" type="button" data-slogan="closed">大于大的，小于小的</button>
       </div>
       <div class="teacher-note" id="teacherNote"><strong>当前讲解：</strong>山峰的闭合等高线向中心升高。</div>
       <div class="scale-pill" id="scalePill">比例尺：示意 1格≈200m</div>
@@ -565,20 +590,35 @@
         landform: {
           label: "部位判读",
           ids: ["peak", "basin", "ridge", "valley", "saddle", "cliff"],
-          slogans: ["凸高为谷，凸低为脊", "密陡疏缓", "大于大的，小于小的"],
           note: "先判断等高线数值变化，再判断弯曲方向和疏密。",
         },
         terrainType: {
           label: "地形类型",
           ids: ["plain", "hills", "mountain", "plateau", "large_basin"],
-          slogans: ["低平线疏", "线密坡陡", "顶平边陡"],
           note: "用海拔、高差、线距和整体形态区分五类地形。",
         },
         application: {
           label: "应用选址",
           ids: ["reservoir_site"],
-          slogans: ["口小肚大", "坝修窄口", "库在上游"],
           note: "水库坝址先找峡谷窄口，再看上游是否有宽阔库区。",
+        },
+      };
+      const SLOGAN_ORDER = ["bend", "slope", "closed"];
+      const SLOGAN_META = {
+        bend: {
+          label: "凸高为谷，凸低为脊",
+          message: "切到山脊或山谷观察弯曲方向：等高线向高值凸出是山谷，向低值凸出是山脊。",
+          hint: "口诀验证：建议切到山脊/山谷，沿弯曲方向比较高低值。",
+        },
+        slope: {
+          label: "密陡疏缓",
+          message: "观察等高线密集处与 3D 坡面：同样水平距离内高差越大，坡越陡；线越疏，坡越缓。",
+          hint: "口诀验证：点选密集线附近，再和稀疏线附近的 3D 坡面作对比。",
+        },
+        closed: {
+          label: "大于大的，小于小的",
+          message: "闭合等高线没有数字时，内部若高于外侧大值就是山峰，低于外侧小值就是盆地或洼地。",
+          hint: "口诀验证：切到山峰或盆地，比较闭合线内外的数值变化。",
         },
       };
       const state = {
@@ -589,6 +629,8 @@
         verticalScale: 1,
         interval: 100,
         view: "orbit",
+        activeSlogan: null,
+        selectedPoint: null,
         sliceLevels: [],
         sliceTimer: null,
         sliceIndex: -1,
@@ -605,6 +647,7 @@
       let terrainMesh;
       let contourGroup;
       let historyGroup;
+      let selectionGroup;
       let slicePlane;
       let dragState = null;
       const gridSize = 121;
@@ -697,7 +740,8 @@
 
         contourGroup = new THREE.Group();
         historyGroup = new THREE.Group();
-        scene.add(contourGroup, historyGroup);
+        selectionGroup = new THREE.Group();
+        scene.add(contourGroup, historyGroup, selectionGroup);
 
         const planeGeometry = new THREE.PlaneGeometry(11, 11, 1, 1);
         const planeMaterial = new THREE.MeshBasicMaterial({
@@ -791,6 +835,9 @@
 
       function updateScene() {
         if (!renderer || !scene) return;
+        if (state.selectedPoint) {
+          state.selectedPoint.height = core.heightAt(state.terrain, state.selectedPoint.x, state.selectedPoint.z, params());
+        }
         const grid = core.sampleGrid(state.terrain, gridSize, params());
         if (terrainMesh) {
           terrainMesh.geometry.dispose();
@@ -820,6 +867,7 @@
         state.sliceIndex = -1;
         slicePlane.visible = false;
         updateCameraForView();
+        updateSelectionMarker();
         drawContourCanvas();
         drawReferenceCard();
         updateCopy();
@@ -917,6 +965,7 @@
         }
 
         drawSpecialMarks(ctx, plotW, plotH, colors);
+        drawSelectedPoint(ctx, plotW, plotH, colors);
         ctx.restore();
       }
 
@@ -1151,6 +1200,50 @@
         ctx.fill();
       }
 
+      function drawSelectedPoint(ctx, width, height, colors) {
+        if (!state.selectedPoint) return;
+        const point = toCanvas(state.selectedPoint.x, state.selectedPoint.z, width, height);
+        const radius = 7 * window.devicePixelRatio;
+        ctx.save();
+        ctx.strokeStyle = colors.danger;
+        ctx.fillStyle = colors.danger;
+        ctx.lineWidth = 2.5 * window.devicePixelRatio;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(point.x - radius * 2, point.y);
+        ctx.lineTo(point.x + radius * 2, point.y);
+        ctx.moveTo(point.x, point.y - radius * 2);
+        ctx.lineTo(point.x, point.y + radius * 2);
+        ctx.stroke();
+        label(ctx, `${Math.round(state.selectedPoint.height)}m`, point.x + 34 * window.devicePixelRatio, point.y - 18 * window.devicePixelRatio, colors);
+        ctx.restore();
+      }
+
+      function updateSelectionMarker() {
+        if (!selectionGroup || !window.THREE) return;
+        clearGroup(selectionGroup);
+        if (!state.selectedPoint) return;
+
+        const x = state.selectedPoint.x * 5;
+        const z = state.selectedPoint.z * 5;
+        const y = heightToY(state.selectedPoint.height) + 0.2;
+        const sphere = new THREE.Mesh(
+          new THREE.SphereGeometry(0.16, 18, 12),
+          new THREE.MeshBasicMaterial({ color: 0xff6b4a }),
+        );
+        sphere.position.set(x, y, z);
+        selectionGroup.add(sphere);
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.Float32BufferAttribute([x, 0.05, z, x, y, z], 3));
+        selectionGroup.add(new THREE.Line(
+          geometry,
+          new THREE.LineBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.88 }),
+        ));
+      }
+
       function drawTriangle(ctx, x, y, size, color) {
         ctx.fillStyle = color;
         ctx.beginPath();
@@ -1314,12 +1407,19 @@
         }, state.terrain === "cliff" ? 520 : 340);
       }
 
+      function resetClassroomFocus() {
+        state.activeSlogan = null;
+        state.selectedPoint = null;
+        updateSelectionMarker();
+      }
+
       function resetView() {
         state.view = "orbit";
         state.camera.radius = 12;
         state.camera.theta = Math.PI * 0.78;
         state.camera.phi = Math.PI * 0.32;
         viewButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.view === "orbit"));
+        updateViewCopy();
       }
 
       function drawCanvasFallback() {
@@ -1344,17 +1444,83 @@
         byId("cardTitle").textContent = `${titlePrefix} ${meta.label}参考卡`;
         byId("terrainName").textContent = meta.label;
         byId("terrainRule").textContent = meta.rule;
-        byId("teacherNote").innerHTML = `<strong>${mode.label}：</strong>${meta.proverb}。${mode.note}`;
         byId("contourStatus").textContent = `等高距 ${state.interval}m`;
         byId("legendPrimary").textContent = meta.rule;
         byId("legendSecondary").textContent = `${mode.label}中的 ${meta.label}、2D 等高线和切面轨迹共用同一个 h(x,z)。`;
         byId("scalePill").textContent = state.mode === "application" ? "示范：坝址线 / 库区 / 河流" : "比例尺：示意 1格≈200m";
-        renderSlogans(mode);
+        renderSlogans();
+        updateTeacherNote();
+        updatePointReadout();
+        updateViewCopy();
       }
 
-      function renderSlogans(mode) {
+      function updateTeacherNote() {
+        const meta = currentMeta();
+        const mode = currentMode();
+        const slogan = state.activeSlogan ? SLOGAN_META[state.activeSlogan] : null;
+        if (slogan) {
+          byId("teacherNote").innerHTML = `<strong>口诀验证：</strong>${slogan.message}`;
+          return;
+        }
+        byId("teacherNote").innerHTML = `<strong>${mode.label}：</strong>${meta.proverb}。${mode.note}`;
+      }
+
+      function updateViewCopy() {
+        if (state.selectedPoint) {
+          byId("sliceHeight").textContent = `点选联动：${Math.round(state.selectedPoint.height)}m`;
+          byId("sliceHint").textContent = "已点选：右侧 2D 点位和中间 3D 亮点是同一位置，可用它追踪等高线与真实坡面的关系。";
+          return;
+        }
+        if (state.activeSlogan) {
+          byId("sliceHeight").textContent = "口诀验证";
+          byId("sliceHint").textContent = SLOGAN_META[state.activeSlogan].hint;
+          return;
+        }
+        if (state.view === "overhead") {
+          byId("sliceHeight").textContent = "俯视对照";
+          byId("sliceHint").textContent = "俯视图就是等高线图的空间来源：从正上方看，3D 高低起伏被压缩成平面等高线。";
+          return;
+        }
+        byId("sliceHeight").textContent = "切面：未开始";
+        byId("sliceHint").textContent = "水平面上移时，与地形相交的线就是等高线。";
+      }
+
+      function updatePointReadout() {
+        if (!state.selectedPoint) {
+          byId("pointReadout").textContent = "点击 2D 等高线图任意位置；已点选后会在 2D 与 3D 中同步标出同一点及海拔。";
+          return;
+        }
+        byId("pointReadout").textContent = `已点选：x=${state.selectedPoint.x.toFixed(2)}，z=${state.selectedPoint.z.toFixed(2)}，海拔约 ${Math.round(state.selectedPoint.height)}m。`;
+      }
+
+      function renderSlogans() {
         const row = document.querySelector(".slogan-row");
-        row.innerHTML = mode.slogans.map((text) => `<span class="slogan">${text}</span>`).join("");
+        row.innerHTML = SLOGAN_ORDER.map((id) => {
+          const active = state.activeSlogan === id ? " is-active" : "";
+          return `<button class="slogan${active}" type="button" data-slogan="${id}">${SLOGAN_META[id].label}</button>`;
+        }).join("");
+      }
+
+      function handleContourClick(event) {
+        const rect = contourCanvas.getBoundingClientRect();
+        const localX = (event.clientX - rect.left) * (contourCanvas.width / Math.max(1, rect.width));
+        const localY = (event.clientY - rect.top) * (contourCanvas.height / Math.max(1, rect.height));
+        const pad = Math.min(contourCanvas.width, contourCanvas.height) * 0.08;
+        const plotW = contourCanvas.width - pad * 2;
+        const plotH = contourCanvas.height - pad * 2;
+        if (localX < pad || localX > pad + plotW || localY < pad || localY > pad + plotH) return;
+
+        const x = ((localX - pad) / plotW) * 2 - 1;
+        const z = ((localY - pad) / plotH) * 2 - 1;
+        state.selectedPoint = {
+          x,
+          z,
+          height: core.heightAt(state.terrain, x, z, params()),
+        };
+        updateSelectionMarker();
+        drawContourCanvas();
+        updatePointReadout();
+        updateViewCopy();
       }
 
       function bindEvents() {
@@ -1365,6 +1531,7 @@
             state.terrain = mode.ids[0];
             modeButtons.forEach((item) => item.classList.toggle("is-active", item === button));
             renderTerrainButtons();
+            resetClassroomFocus();
             resetView();
             updateScene();
           });
@@ -1375,6 +1542,7 @@
           if (!button) return;
           state.terrain = button.dataset.terrain;
           terrainButtons.forEach((item) => item.classList.toggle("is-active", item === button));
+          resetClassroomFocus();
           updateScene();
         });
 
@@ -1383,8 +1551,20 @@
             state.view = button.dataset.view;
             viewButtons.forEach((item) => item.classList.toggle("is-active", item === button));
             updateCameraForView();
+            updateViewCopy();
           });
         });
+
+        document.querySelector(".slogan-row").addEventListener("click", function (event) {
+          const button = event.target.closest("[data-slogan]");
+          if (!button) return;
+          state.activeSlogan = button.dataset.slogan;
+          renderSlogans();
+          updateTeacherNote();
+          updateViewCopy();
+        });
+
+        contourCanvas.addEventListener("click", handleContourClick);
 
         byId("sliceButton").addEventListener("click", startSliceAnimation);
         byId("resetButton").addEventListener("click", resetView);
