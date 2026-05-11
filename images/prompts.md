@@ -4,6 +4,34 @@
 > Plan source: `E:\agent\finalyouhuaditu.md`  
 > Rule: GPT 图片只做教材参考卡，不作为高度图、几何数据或 3D 地形来源。
 
+## A1-A6 入库记录
+
+- Date: 2026-05-11
+- Tool: Codex built-in image generation
+- QC status: PASS for first classroom prototype
+- Re-prompt history: none
+- Notes: A1-A6 均按 `finalyouhuaditu.md` 第 6.3-6.8 节完整 prompt 生成；实际提交到网页的是 `images/processed/*.webp`，原始 PNG 保留在 `images/gpt-raw/`。
+
+| Card | Raw file | Processed file | QC summary |
+|---|---|---|---|
+| A1_peak | `images/gpt-raw/A1_peak_raw.png` | `images/processed/A1_peak.webp` | 闭合环线、中心高、山峰插图清楚 |
+| A2_basin | `images/gpt-raw/A2_basin_raw.png` | `images/processed/A2_basin.webp` | 闭合环线、中心低、示坡线向内 |
+| A3_ridge | `images/gpt-raw/A3_ridge_raw.png` | `images/processed/A3_ridge.webp` | 山脊线与分水含义清楚 |
+| A4_valley | `images/gpt-raw/A4_valley_raw.png` | `images/processed/A4_valley.webp` | 山谷线、水流箭头和低值流向清楚 |
+| A5_saddle | `images/gpt-raw/A5_saddle_raw.png` | `images/processed/A5_saddle.webp` | 两峰与中间鞍部关系清楚 |
+| A6_cliff | `images/gpt-raw/A6_cliff_raw.png` | `images/processed/A6_cliff.webp` | 多条等高线重合和陡崖公式清楚 |
+
+### 实际生成源文件
+
+```text
+A1_peak_raw.png  <- C:\Users\xl\.codex\generated_images\019e15a9-2bfb-7261-8a81-6ba133d963a2\ig_00a2c8e67f6af560016a017fe181c48191a3dc52abd5314853.png
+A2_basin_raw.png <- C:\Users\xl\.codex\generated_images\019e15a9-2bfb-7261-8a81-6ba133d963a2\ig_00a2c8e67f6af560016a0181e4d1fc81919841763c8af8f098.png
+A3_ridge_raw.png <- C:\Users\xl\.codex\generated_images\019e15a9-2bfb-7261-8a81-6ba133d963a2\ig_00a2c8e67f6af560016a0182606e308191901a8b2bce1af3f3.png
+A4_valley_raw.png <- C:\Users\xl\.codex\generated_images\019e15a9-2bfb-7261-8a81-6ba133d963a2\ig_00a2c8e67f6af560016a0182cf36b48191ba42d33f859bb275.png
+A5_saddle_raw.png <- C:\Users\xl\.codex\generated_images\019e15a9-2bfb-7261-8a81-6ba133d963a2\ig_00a2c8e67f6af560016a018336adb481918f7d14d7ca1e7023.png
+A6_cliff_raw.png <- C:\Users\xl\.codex\generated_images\019e15a9-2bfb-7261-8a81-6ba133d963a2\ig_00a2c8e67f6af560016a0183b12b788191897144befbf4f274.png
+```
+
 ## 全局 QC 清单
 
 - 数值单调性：海拔值沿预期方向单调变化。
@@ -24,19 +52,21 @@
 - Tool: Codex image generation
 - Raw file: `images/gpt-raw/A1_peak_raw.png`
 - Processed file: `images/processed/A1_peak.webp`
-- QC status: TODO
-- Failed items:
+- QC status: PASS
+- Failed items: none
 - Final prompt source: `finalyouhuaditu.md` section `6.3 A1 山峰 / Peak`
 - Final prompt:
 
 ```text
-TODO: paste the final prompt used for the accepted A1 image.
+Use the complete prompt in `finalyouhuaditu.md` section `6.3 A1 山峰 / Peak`, wrapped with:
+Use case: scientific-educational
+Asset type: high school geography contour teaching reference card
 ```
 
 - Re-prompt history:
   - Attempt 1:
   - Attempt 2:
-- Notes:
+- Notes: First accepted image. Values increase toward the center; 3D inset is a raised peak.
 - Required checks:
   - 等高线闭合且嵌套。
   - 海拔数字向中心单调递增。
@@ -50,19 +80,21 @@ TODO: paste the final prompt used for the accepted A1 image.
 - Tool: Codex image generation
 - Raw file: `images/gpt-raw/A2_basin_raw.png`
 - Processed file: `images/processed/A2_basin.webp`
-- QC status: TODO
-- Failed items:
+- QC status: PASS
+- Failed items: none
 - Final prompt source: `finalyouhuaditu.md` section `6.4 A2 盆地 / Depression Basin`
 - Final prompt:
 
 ```text
-TODO: paste the final prompt used for the accepted A2 image.
+Use the complete prompt in `finalyouhuaditu.md` section `6.4 A2 盆地 / Depression Basin`, wrapped with:
+Use case: scientific-educational
+Asset type: high school geography contour teaching reference card
 ```
 
 - Re-prompt history:
   - Attempt 1:
   - Attempt 2:
-- Notes:
+- Notes: First accepted image. Values decrease toward the center; inward hachures are visible.
 - Required checks:
   - 等高线向中心闭合。
   - 海拔数字向中心单调递减。
@@ -76,19 +108,21 @@ TODO: paste the final prompt used for the accepted A2 image.
 - Tool: Codex image generation
 - Raw file: `images/gpt-raw/A3_ridge_raw.png`
 - Processed file: `images/processed/A3_ridge.webp`
-- QC status: TODO
-- Failed items:
+- QC status: PASS
+- Failed items: none
 - Final prompt source: `finalyouhuaditu.md` section `6.5 A3 山脊 / Ridge`
 - Final prompt:
 
 ```text
-TODO: paste the final prompt used for the accepted A3 image.
+Use the complete prompt in `finalyouhuaditu.md` section `6.5 A3 山脊 / Ridge`, wrapped with:
+Use case: scientific-educational
+Asset type: high school geography contour teaching reference card
 ```
 
 - Re-prompt history:
   - Attempt 1:
   - Attempt 2:
-- Notes:
+- Notes: First accepted image. Ridge axis and watershed arrows are legible.
 - Required checks:
   - 弯曲顶点朝低值方向。
   - 脊轴沿弯曲顶点延伸。
@@ -102,19 +136,21 @@ TODO: paste the final prompt used for the accepted A3 image.
 - Tool: Codex image generation
 - Raw file: `images/gpt-raw/A4_valley_raw.png`
 - Processed file: `images/processed/A4_valley.webp`
-- QC status: TODO
-- Failed items:
+- QC status: PASS
+- Failed items: none
 - Final prompt source: `finalyouhuaditu.md` section `6.6 A4 山谷 / Valley`
 - Final prompt:
 
 ```text
-TODO: paste the final prompt used for the accepted A4 image.
+Use the complete prompt in `finalyouhuaditu.md` section `6.6 A4 山谷 / Valley`, wrapped with:
+Use case: scientific-educational
+Asset type: high school geography contour teaching reference card
 ```
 
 - Re-prompt history:
   - Attempt 1:
   - Attempt 2:
-- Notes:
+- Notes: First accepted image. Valley axis and downstream flow arrows are legible.
 - Required checks:
   - 弯曲顶点朝高值方向。
   - 水流箭头朝低值方向。
@@ -128,19 +164,21 @@ TODO: paste the final prompt used for the accepted A4 image.
 - Tool: Codex image generation
 - Raw file: `images/gpt-raw/A5_saddle_raw.png`
 - Processed file: `images/processed/A5_saddle.webp`
-- QC status: TODO
-- Failed items:
+- QC status: PASS
+- Failed items: none
 - Final prompt source: `finalyouhuaditu.md` section `6.7 A5 鞍部 / Saddle`
 - Final prompt:
 
 ```text
-TODO: paste the final prompt used for the accepted A5 image.
+Use the complete prompt in `finalyouhuaditu.md` section `6.7 A5 鞍部 / Saddle`, wrapped with:
+Use case: scientific-educational
+Asset type: high school geography contour teaching reference card
 ```
 
 - Re-prompt history:
   - Attempt 1:
   - Attempt 2:
-- Notes:
+- Notes: First accepted image. Two summits and the lower saddle pass are legible.
 - Required checks:
   - 有两套独立闭合等高线。
   - 两个峰之间有低缓鞍点。
@@ -154,23 +192,24 @@ TODO: paste the final prompt used for the accepted A5 image.
 - Tool: Codex image generation
 - Raw file: `images/gpt-raw/A6_cliff_raw.png`
 - Processed file: `images/processed/A6_cliff.webp`
-- QC status: TODO
-- Failed items:
+- QC status: PASS
+- Failed items: none
 - Final prompt source: `finalyouhuaditu.md` section `6.8 A6 陡崖 / Cliff`
 - Final prompt:
 
 ```text
-TODO: paste the final prompt used for the accepted A6 image.
+Use the complete prompt in `finalyouhuaditu.md` section `6.8 A6 陡崖 / Cliff`, wrapped with:
+Use case: scientific-educational
+Asset type: high school geography contour teaching reference card
 ```
 
 - Re-prompt history:
   - Attempt 1:
   - Attempt 2:
-- Notes:
+- Notes: First accepted image. Overlapping contour band and cliff formula are legible.
 - Required checks:
   - 可数出至少 3 条不同高度等高线重合。
   - 下方和上方海拔方向合理。
   - 有“陡崖”或等价中文标注。
   - 公式框清楚，不出现乱码。
   - 3D 插图是陡崖，不是普通陡坡。
-
