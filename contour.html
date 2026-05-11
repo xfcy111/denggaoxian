@@ -1,0 +1,1263 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>等高线地形图 3D 互动教学</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #f4efe4;
+      --paper: #fffaf0;
+      --ink: #1d2521;
+      --muted: #68726b;
+      --line: #d8c8a6;
+      --contour: #7b4f25;
+      --contour-strong: #3c2b1d;
+      --accent: #0f6b68;
+      --accent-2: #bb5b2f;
+      --blue: #2672b9;
+      --green: #317d47;
+      --danger: #b84135;
+      --shadow: 0 18px 40px rgba(81, 61, 35, 0.12);
+      --radius: 8px;
+      --toolbar: rgba(255, 250, 240, 0.92);
+    }
+
+    [data-theme="geo"] {
+      color-scheme: dark;
+      --page: #111817;
+      --paper: #182221;
+      --ink: #edf3e9;
+      --muted: #9eb2aa;
+      --line: #29423f;
+      --contour: #d7a767;
+      --contour-strong: #ffe2a6;
+      --accent: #42c6bc;
+      --accent-2: #e6a04b;
+      --blue: #6eb5ff;
+      --green: #7ad38a;
+      --danger: #ff776d;
+      --shadow: 0 22px 46px rgba(0, 0, 0, 0.28);
+      --toolbar: rgba(24, 34, 33, 0.9);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      background:
+        linear-gradient(90deg, rgba(123, 79, 37, 0.05) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(123, 79, 37, 0.05) 1px, transparent 1px),
+        var(--page);
+      background-size: 32px 32px;
+      color: var(--ink);
+      font-family: "Microsoft YaHei", "Noto Sans SC", "PingFang SC", sans-serif;
+      overflow: hidden;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      min-height: 100%;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(230px, 1fr) auto auto;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--toolbar);
+      backdrop-filter: blur(14px);
+      z-index: 5;
+    }
+
+    .brand {
+      min-width: 0;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.2;
+      font-weight: 800;
+    }
+
+    .brand p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .terrain-switcher,
+    .view-switcher,
+    .utility-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .terrain-button,
+    .view-button,
+    .utility-button {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--paper) 92%, transparent);
+      color: var(--ink);
+      padding: 8px 12px;
+      min-height: 36px;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+      white-space: nowrap;
+    }
+
+    .terrain-button:hover,
+    .view-button:hover,
+    .utility-button:hover {
+      transform: translateY(-1px);
+      border-color: var(--accent);
+    }
+
+    .terrain-button.is-active,
+    .view-button.is-active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(250px, 0.72fr) minmax(430px, 1.35fr) minmax(320px, 0.93fr);
+      gap: 14px;
+      min-height: 0;
+      padding: 14px;
+    }
+
+    .panel,
+    .stage {
+      min-width: 0;
+      min-height: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--paper) 94%, transparent);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 15px 11px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .panel-header span {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .reference-body,
+    .contour-body {
+      min-height: 0;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .reference-frame,
+    .canvas-frame {
+      position: relative;
+      min-height: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #f8f1df;
+      overflow: hidden;
+    }
+
+    [data-theme="geo"] .reference-frame,
+    [data-theme="geo"] .canvas-frame {
+      background: #0d1514;
+    }
+
+    #referenceCanvas,
+    #contourCanvas,
+    #profileCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .reference-frame {
+      aspect-ratio: 1 / 1;
+    }
+
+    .canvas-frame {
+      min-height: 300px;
+    }
+
+    .stage {
+      position: relative;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr);
+      background: #0f1715;
+    }
+
+    #terrainCanvas {
+      width: 100%;
+      height: 100%;
+      min-height: 520px;
+      display: block;
+      background: #101816;
+    }
+
+    .stage-overlay {
+      position: absolute;
+      left: 16px;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .stage-readout,
+    .slice-readout {
+      pointer-events: auto;
+      max-width: min(430px, 48%);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius);
+      background: rgba(12, 18, 17, 0.72);
+      color: #f7f1df;
+      padding: 11px 12px;
+      backdrop-filter: blur(12px);
+    }
+
+    .stage-readout strong,
+    .slice-readout strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 15px;
+    }
+
+    .stage-readout span,
+    .slice-readout span {
+      color: rgba(247, 241, 223, 0.75);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .legend-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .legend-list li {
+      display: grid;
+      grid-template-columns: 9px minmax(0, 1fr);
+      gap: 8px;
+      align-items: start;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      margin-top: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .dot.orange {
+      background: var(--accent-2);
+    }
+
+    .dot.blue {
+      background: var(--blue);
+    }
+
+    .controls-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      padding: 12px;
+      border-top: 1px solid var(--line);
+      background: color-mix(in srgb, var(--paper) 88%, transparent);
+    }
+
+    .control-field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .control-field label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .control-field input {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .teacher-strip {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 18px;
+      border-top: 1px solid var(--line);
+      background: var(--toolbar);
+      backdrop-filter: blur(14px);
+    }
+
+    .slogan-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .slogan {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: color-mix(in srgb, var(--paper) 90%, transparent);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .teacher-note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      min-width: 0;
+    }
+
+    .teacher-note strong {
+      color: var(--ink);
+    }
+
+    .scale-pill {
+      border-radius: 999px;
+      background: var(--contour-strong);
+      color: var(--paper);
+      padding: 7px 11px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .missing-card {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1080px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        display: block;
+        min-height: 100%;
+      }
+
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      #terrainCanvas {
+        min-height: 420px;
+      }
+
+      .teacher-strip,
+      .controls-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .stage-overlay {
+        position: static;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 10px;
+        background: #101816;
+      }
+
+      .stage {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .stage-readout,
+      .slice-readout {
+        max-width: none;
+        min-height: 0;
+      }
+    }
+  </style>
+</head>
+<body data-theme="exam">
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>等高线地形图 3D 互动教学</h1>
+        <p>教师大屏讲解优先 · 解析函数负责几何真相 · GPT 图片负责教材参考</p>
+      </div>
+
+      <nav class="terrain-switcher" aria-label="地形部位切换">
+        <button class="terrain-button is-active" type="button" data-terrain="peak">山峰</button>
+        <button class="terrain-button" type="button" data-terrain="basin">盆地</button>
+        <button class="terrain-button" type="button" data-terrain="ridge">山脊</button>
+        <button class="terrain-button" type="button" data-terrain="valley">山谷</button>
+        <button class="terrain-button" type="button" data-terrain="saddle">鞍部</button>
+        <button class="terrain-button" type="button" data-terrain="cliff">陡崖</button>
+      </nav>
+
+      <div class="utility-actions">
+        <button class="utility-button" type="button" id="sliceButton">切面溯源</button>
+        <button class="utility-button" type="button" id="resetButton">复位视角</button>
+        <button class="utility-button" type="button" id="themeToggle">自然地理主题</button>
+      </div>
+    </header>
+
+    <section class="workspace" aria-label="等高线互动讲解工作区">
+      <aside class="panel reference-panel">
+        <div class="panel-header">
+          <h2 id="cardTitle">A1 山峰参考卡</h2>
+          <span id="cardStatus">待接入 GPT 图</span>
+        </div>
+        <div class="reference-body">
+          <div class="reference-frame">
+            <canvas id="referenceCanvas" width="900" height="900" aria-label="教材参考卡预览"></canvas>
+          </div>
+          <p class="missing-card" id="cardNote">images/processed/A1_peak.webp 不存在时，页面使用同一解析函数绘制临时教学卡。</p>
+        </div>
+        <div class="controls-strip">
+          <div class="control-field">
+            <label for="reliefRange">起伏</label>
+            <input id="reliefRange" type="range" min="0.7" max="1.35" step="0.05" value="1">
+          </div>
+          <div class="control-field">
+            <label for="verticalRange">竖向</label>
+            <input id="verticalRange" type="range" min="0.75" max="1.45" step="0.05" value="1">
+          </div>
+          <div class="control-field">
+            <label for="intervalRange">等高距</label>
+            <input id="intervalRange" type="range" min="50" max="150" step="50" value="100">
+          </div>
+        </div>
+      </aside>
+
+      <section class="stage" aria-label="Three.js 3D 地形">
+        <canvas id="terrainCanvas"></canvas>
+        <div class="stage-overlay">
+          <div class="stage-readout">
+            <strong id="terrainName">山峰</strong>
+            <span id="terrainRule">闭合等高线，中间高、四周低</span>
+          </div>
+          <div class="slice-readout">
+            <strong id="sliceHeight">切面：未开始</strong>
+            <span id="sliceHint">水平面上移时，与地形相交的线就是等高线。</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="panel contour-panel">
+        <div class="panel-header">
+          <h2>2D 等高线卷面图</h2>
+          <span id="contourStatus">等高距 100m</span>
+        </div>
+        <div class="contour-body">
+          <div class="canvas-frame">
+            <canvas id="contourCanvas" width="900" height="720" aria-label="2D 等高线卷面图"></canvas>
+          </div>
+          <ul class="legend-list">
+            <li><span class="dot"></span><span id="legendPrimary">同一高度点连成线，数值向山顶递增。</span></li>
+            <li><span class="dot orange"></span><span>计曲线加粗，投屏时优先读粗线数字。</span></li>
+            <li><span class="dot blue"></span><span id="legendSecondary">3D 与 2D 共用同一个 h(x,z)。</span></li>
+          </ul>
+          <div class="view-switcher" aria-label="视角切换">
+            <button class="view-button is-active" type="button" data-view="orbit">斜视地形</button>
+            <button class="view-button" type="button" data-view="overhead">俯视对照</button>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <footer class="teacher-strip">
+      <div class="slogan-row" aria-label="读图口诀">
+        <span class="slogan">凸高为谷，凸低为脊</span>
+        <span class="slogan">密陡疏缓</span>
+        <span class="slogan">大于大的，小于小的</span>
+      </div>
+      <div class="teacher-note" id="teacherNote"><strong>当前讲解：</strong>山峰的闭合等高线向中心升高。</div>
+      <div class="scale-pill" id="scalePill">比例尺：示意 1格≈200m</div>
+    </footer>
+  </main>
+
+  <script src="terrain-core.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    (function () {
+      const core = window.ContourTerrain;
+      const terrainCanvas = document.getElementById("terrainCanvas");
+      const contourCanvas = document.getElementById("contourCanvas");
+      const referenceCanvas = document.getElementById("referenceCanvas");
+      const terrainButtons = Array.from(document.querySelectorAll("[data-terrain]"));
+      const viewButtons = Array.from(document.querySelectorAll("[data-view]"));
+      const state = {
+        terrain: "peak",
+        theme: "exam",
+        relief: 1,
+        verticalScale: 1,
+        interval: 100,
+        view: "orbit",
+        sliceLevels: [],
+        sliceTimer: null,
+        sliceIndex: -1,
+        camera: {
+          radius: 12,
+          theta: Math.PI * 0.78,
+          phi: Math.PI * 0.32,
+        },
+      };
+
+      let renderer;
+      let scene;
+      let camera;
+      let terrainMesh;
+      let contourGroup;
+      let historyGroup;
+      let slicePlane;
+      let dragState = null;
+      const gridSize = 121;
+
+      function byId(id) {
+        return document.getElementById(id);
+      }
+
+      function params() {
+        return {
+          relief: state.relief,
+          verticalScale: state.verticalScale,
+        };
+      }
+
+      function currentMeta() {
+        return core.TERRAIN_TYPES.find((item) => item.id === state.terrain);
+      }
+
+      function heightToY(height) {
+        return (height - 120) / 95;
+      }
+
+      function getThemeColors() {
+        const style = getComputedStyle(document.body);
+        return {
+          paper: style.getPropertyValue("--paper").trim(),
+          ink: style.getPropertyValue("--ink").trim(),
+          muted: style.getPropertyValue("--muted").trim(),
+          contour: style.getPropertyValue("--contour").trim(),
+          contourStrong: style.getPropertyValue("--contour-strong").trim(),
+          accent: style.getPropertyValue("--accent").trim(),
+          accent2: style.getPropertyValue("--accent-2").trim(),
+          blue: style.getPropertyValue("--blue").trim(),
+          green: style.getPropertyValue("--green").trim(),
+          danger: style.getPropertyValue("--danger").trim(),
+        };
+      }
+
+      function resizeCanvasToDisplaySize(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const width = Math.max(320, Math.floor(rect.width * window.devicePixelRatio));
+        const height = Math.max(240, Math.floor(rect.height * window.devicePixelRatio));
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+          return true;
+        }
+        return false;
+      }
+
+      function initThree() {
+        if (!window.THREE) {
+          drawCanvasFallback();
+          return;
+        }
+
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x101816);
+
+        camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+        renderer = new THREE.WebGLRenderer({
+          canvas: terrainCanvas,
+          antialias: true,
+          alpha: false,
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const ambient = new THREE.AmbientLight(0xffffff, 0.58);
+        const key = new THREE.DirectionalLight(0xfff1d0, 1.1);
+        key.position.set(-4, 8, 5);
+        const fill = new THREE.DirectionalLight(0x88c7ff, 0.55);
+        fill.position.set(5, 4, -5);
+        scene.add(ambient, key, fill);
+
+        contourGroup = new THREE.Group();
+        historyGroup = new THREE.Group();
+        scene.add(contourGroup, historyGroup);
+
+        const planeGeometry = new THREE.PlaneGeometry(11, 11, 1, 1);
+        const planeMaterial = new THREE.MeshBasicMaterial({
+          color: 0x4abbd2,
+          transparent: true,
+          opacity: 0.2,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        });
+        slicePlane = new THREE.Mesh(planeGeometry, planeMaterial);
+        slicePlane.rotation.x = -Math.PI / 2;
+        slicePlane.visible = false;
+        scene.add(slicePlane);
+
+        terrainCanvas.addEventListener("pointerdown", onPointerDown);
+        window.addEventListener("pointermove", onPointerMove);
+        window.addEventListener("pointerup", onPointerUp);
+        terrainCanvas.addEventListener("wheel", onWheel, { passive: false });
+
+        updateScene();
+        animate();
+      }
+
+      function makeTerrainGeometry(grid) {
+        const positions = [];
+        const colors = [];
+        const indices = [];
+        const color = new THREE.Color();
+
+        for (let row = 0; row < grid.size; row += 1) {
+          const z = -5 + (10 * row) / (grid.size - 1);
+          for (let col = 0; col < grid.size; col += 1) {
+            const x = -5 + (10 * col) / (grid.size - 1);
+            const height = grid.values[row * grid.size + col];
+            const y = heightToY(height);
+            positions.push(x, y, z);
+
+            const t = (height - grid.min) / Math.max(1, grid.max - grid.min);
+            if (state.theme === "geo") {
+              color.setHSL(0.43 - t * 0.22, 0.45 + t * 0.25, 0.24 + t * 0.36);
+            } else {
+              color.setHSL(0.24 - t * 0.11, 0.42, 0.38 + t * 0.34);
+            }
+            colors.push(color.r, color.g, color.b);
+          }
+        }
+
+        for (let row = 0; row < grid.size - 1; row += 1) {
+          for (let col = 0; col < grid.size - 1; col += 1) {
+            const a = row * grid.size + col;
+            const b = a + 1;
+            const c = a + grid.size;
+            const d = c + 1;
+            indices.push(a, c, b, b, c, d);
+          }
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+        return geometry;
+      }
+
+      function clearGroup(group) {
+        if (!group) return;
+        while (group.children.length) {
+          const child = group.children.pop();
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) child.material.dispose();
+        }
+      }
+
+      function lineSegmentsForLevel(grid, level, colorValue, opacity, yOffset) {
+        const segments = core.contourSegments(grid, level);
+        const positions = [];
+        for (const segment of segments) {
+          positions.push(segment[0] * 5, heightToY(level) + yOffset, segment[1] * 5);
+          positions.push(segment[2] * 5, heightToY(level) + yOffset, segment[3] * 5);
+        }
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+        const material = new THREE.LineBasicMaterial({
+          color: colorValue,
+          transparent: opacity < 1,
+          opacity,
+        });
+        return new THREE.LineSegments(geometry, material);
+      }
+
+      function updateScene() {
+        if (!renderer || !scene) return;
+        const grid = core.sampleGrid(state.terrain, gridSize, params());
+        if (terrainMesh) {
+          terrainMesh.geometry.dispose();
+          terrainMesh.material.dispose();
+          scene.remove(terrainMesh);
+        }
+
+        terrainMesh = new THREE.Mesh(
+          makeTerrainGeometry(grid),
+          new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            roughness: 0.86,
+            metalness: 0.02,
+          }),
+        );
+        scene.add(terrainMesh);
+
+        clearGroup(contourGroup);
+        const levels = core.contourLevels(grid.min, grid.max, state.interval);
+        for (const level of levels) {
+          const strong = level % 500 === 0;
+          contourGroup.add(lineSegmentsForLevel(grid, level, strong ? 0x2b2018 : 0x684522, 0.82, 0.035));
+        }
+
+        clearGroup(historyGroup);
+        state.sliceLevels = [];
+        state.sliceIndex = -1;
+        slicePlane.visible = false;
+        updateCameraForView();
+        drawContourCanvas();
+        drawReferenceCard();
+        updateCopy();
+      }
+
+      function updateCameraForView() {
+        if (!camera) return;
+        if (state.view === "overhead") {
+          camera.position.set(0, 14, 0.02);
+          camera.lookAt(0, 0, 0);
+          return;
+        }
+        const radius = state.camera.radius;
+        const theta = state.camera.theta;
+        const phi = state.camera.phi;
+        camera.position.set(
+          radius * Math.sin(phi) * Math.cos(theta),
+          radius * Math.cos(phi),
+          radius * Math.sin(phi) * Math.sin(theta),
+        );
+        camera.lookAt(0, 0, 0);
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        if (!renderer || !camera) return;
+        const changed = resizeCanvasToDisplaySize(terrainCanvas);
+        const rect = terrainCanvas.getBoundingClientRect();
+        if (changed || Math.abs(camera.aspect - rect.width / rect.height) > 0.001) {
+          camera.aspect = rect.width / Math.max(1, rect.height);
+          camera.updateProjectionMatrix();
+          renderer.setSize(rect.width, rect.height, false);
+        }
+        updateCameraForView();
+        renderer.render(scene, camera);
+      }
+
+      function onPointerDown(event) {
+        if (state.view === "overhead") return;
+        terrainCanvas.setPointerCapture(event.pointerId);
+        dragState = {
+          x: event.clientX,
+          y: event.clientY,
+          theta: state.camera.theta,
+          phi: state.camera.phi,
+        };
+      }
+
+      function onPointerMove(event) {
+        if (!dragState) return;
+        const dx = event.clientX - dragState.x;
+        const dy = event.clientY - dragState.y;
+        state.camera.theta = dragState.theta - dx * 0.008;
+        state.camera.phi = Math.max(0.18, Math.min(Math.PI * 0.48, dragState.phi + dy * 0.006));
+      }
+
+      function onPointerUp() {
+        dragState = null;
+      }
+
+      function onWheel(event) {
+        if (state.view === "overhead") return;
+        event.preventDefault();
+        state.camera.radius = Math.max(8, Math.min(18, state.camera.radius + event.deltaY * 0.01));
+      }
+
+      function drawContourCanvas() {
+        resizeCanvasToDisplaySize(contourCanvas);
+        const ctx = contourCanvas.getContext("2d");
+        const colors = getThemeColors();
+        const w = contourCanvas.width;
+        const h = contourCanvas.height;
+        const pad = Math.min(w, h) * 0.08;
+        const plotW = w - pad * 2;
+        const plotH = h - pad * 2;
+        const grid = core.sampleGrid(state.terrain, 121, params());
+        const levels = core.contourLevels(grid.min, grid.max, state.interval);
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = colors.paper;
+        ctx.fillRect(0, 0, w, h);
+        drawPaperGrid(ctx, w, h, colors);
+
+        ctx.save();
+        ctx.translate(pad, pad);
+        drawMapFrame(ctx, plotW, plotH, colors);
+
+        for (const level of levels) {
+          const strong = level % 500 === 0 || level === levels[0] || level === levels[levels.length - 1];
+          drawContourLevel(ctx, grid, level, plotW, plotH, colors, strong);
+        }
+
+        for (const level of state.sliceLevels) {
+          drawContourLevel(ctx, grid, level, plotW, plotH, colors, true, colors.blue);
+        }
+
+        drawSpecialMarks(ctx, plotW, plotH, colors);
+        ctx.restore();
+      }
+
+      function drawPaperGrid(ctx, w, h, colors) {
+        ctx.strokeStyle = colorWithAlpha(colors.contour, 0.1);
+        ctx.lineWidth = Math.max(1, window.devicePixelRatio);
+        const step = Math.max(24, Math.floor(w / 18));
+        for (let x = 0; x <= w; x += step) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, h);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= h; y += step) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(w, y);
+          ctx.stroke();
+        }
+      }
+
+      function drawMapFrame(ctx, width, height, colors) {
+        ctx.fillStyle = colorWithAlpha(colors.contour, 0.035);
+        ctx.strokeStyle = colors.line || colorWithAlpha(colors.contour, 0.3);
+        ctx.lineWidth = 2 * window.devicePixelRatio;
+        ctx.fillRect(0, 0, width, height);
+        ctx.strokeRect(0, 0, width, height);
+      }
+
+      function drawContourLevel(ctx, grid, level, width, height, colors, strong, overrideColor) {
+        const segments = core.contourSegments(grid, level);
+        ctx.strokeStyle = overrideColor || (strong ? colors.contourStrong : colors.contour);
+        ctx.lineWidth = (strong ? 2.4 : 1.2) * window.devicePixelRatio;
+        ctx.beginPath();
+        for (const segment of segments) {
+          const a = toCanvas(segment[0], segment[1], width, height);
+          const b = toCanvas(segment[2], segment[3], width, height);
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+        }
+        ctx.stroke();
+
+        if (segments.length > 8 && strong) {
+          const segment = segments[Math.floor(segments.length * 0.35)];
+          const p = toCanvas((segment[0] + segment[2]) / 2, (segment[1] + segment[3]) / 2, width, height);
+          ctx.save();
+          ctx.fillStyle = colors.ink;
+          ctx.font = `${13 * window.devicePixelRatio}px Microsoft YaHei, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(String(Math.round(level)), p.x, p.y);
+          ctx.restore();
+        }
+      }
+
+      function toCanvas(x, z, width, height) {
+        return {
+          x: ((x + 1) / 2) * width,
+          y: ((z + 1) / 2) * height,
+        };
+      }
+
+      function drawSpecialMarks(ctx, width, height, colors) {
+        ctx.save();
+        ctx.font = `${14 * window.devicePixelRatio}px Microsoft YaHei, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.lineWidth = 2 * window.devicePixelRatio;
+
+        if (state.terrain === "peak") {
+          const p = toCanvas(0, 0, width, height);
+          drawTriangle(ctx, p.x, p.y - 10, 12 * window.devicePixelRatio, colors.accent2);
+          label(ctx, "山峰", p.x, p.y + 22, colors);
+        }
+
+        if (state.terrain === "basin") {
+          const p = toCanvas(0, 0, width, height);
+          ctx.strokeStyle = colors.accent2;
+          for (let i = 0; i < 16; i += 1) {
+            const angle = (Math.PI * 2 * i) / 16;
+            const x1 = p.x + Math.cos(angle) * 42 * window.devicePixelRatio;
+            const y1 = p.y + Math.sin(angle) * 32 * window.devicePixelRatio;
+            const x2 = p.x + Math.cos(angle) * 27 * window.devicePixelRatio;
+            const y2 = p.y + Math.sin(angle) * 20 * window.devicePixelRatio;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+          }
+          label(ctx, "示坡线向内", p.x, p.y + 28, colors);
+        }
+
+        if (state.terrain === "ridge" || state.terrain === "valley") {
+          ctx.strokeStyle = state.terrain === "ridge" ? colors.danger : colors.blue;
+          ctx.setLineDash([8 * window.devicePixelRatio, 7 * window.devicePixelRatio]);
+          ctx.beginPath();
+          const p1 = toCanvas(-0.78, -0.22, width, height);
+          const p2 = toCanvas(0.78, 0.22, width, height);
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          label(ctx, state.terrain === "ridge" ? "山脊线" : "山谷线", width * 0.52, height * 0.48, colors);
+        }
+
+        if (state.terrain === "saddle") {
+          const p = toCanvas(0, 0, width, height);
+          ctx.strokeStyle = colors.danger;
+          ctx.beginPath();
+          ctx.moveTo(p.x - 11, p.y - 11);
+          ctx.lineTo(p.x + 11, p.y + 11);
+          ctx.moveTo(p.x + 11, p.y - 11);
+          ctx.lineTo(p.x - 11, p.y + 11);
+          ctx.stroke();
+          label(ctx, "鞍部", p.x, p.y + 30, colors);
+        }
+
+        if (state.terrain === "cliff") {
+          const p1 = toCanvas(0, -0.88, width, height);
+          const p2 = toCanvas(0, 0.88, width, height);
+          ctx.strokeStyle = colors.danger;
+          ctx.lineWidth = 5 * window.devicePixelRatio;
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+          label(ctx, "陡崖", p1.x + 34 * window.devicePixelRatio, height * 0.5, colors);
+        }
+        ctx.restore();
+      }
+
+      function drawTriangle(ctx, x, y, size, color) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x + size, y + size);
+        ctx.lineTo(x - size, y + size);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function label(ctx, text, x, y, colors) {
+        const padding = 6 * window.devicePixelRatio;
+        const metrics = ctx.measureText(text);
+        ctx.fillStyle = colorWithAlpha(colors.paper, 0.88);
+        ctx.fillRect(x - metrics.width / 2 - padding, y - 12 * window.devicePixelRatio, metrics.width + padding * 2, 24 * window.devicePixelRatio);
+        ctx.fillStyle = colors.ink;
+        ctx.fillText(text, x, y);
+      }
+
+      function colorWithAlpha(color, alpha) {
+        const scratch = document.createElement("canvas").getContext("2d");
+        scratch.fillStyle = color;
+        const normalized = scratch.fillStyle;
+        if (normalized.startsWith("#")) {
+          const hex = normalized.slice(1);
+          const full = hex.length === 3
+            ? hex.split("").map((char) => char + char).join("")
+            : hex;
+          const r = parseInt(full.slice(0, 2), 16);
+          const g = parseInt(full.slice(2, 4), 16);
+          const b = parseInt(full.slice(4, 6), 16);
+          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        return normalized;
+      }
+
+      function drawReferenceCard() {
+        resizeCanvasToDisplaySize(referenceCanvas);
+        const meta = currentMeta();
+        const image = new Image();
+        const path = `images/processed/${meta.card}.webp`;
+        image.onload = function () {
+          const ctx = referenceCanvas.getContext("2d");
+          ctx.clearRect(0, 0, referenceCanvas.width, referenceCanvas.height);
+          ctx.drawImage(image, 0, 0, referenceCanvas.width, referenceCanvas.height);
+          byId("cardStatus").textContent = "GPT 参考图";
+          byId("cardNote").textContent = `${path} 已加载。`;
+        };
+        image.onerror = function () {
+          drawGeneratedReferenceCard(meta);
+          byId("cardStatus").textContent = "解析函数临时卡";
+          byId("cardNote").textContent = `${path} 暂未生成，当前卡片由 h(x,z) 临时绘制。`;
+        };
+        image.src = path;
+      }
+
+      function drawGeneratedReferenceCard(meta) {
+        const ctx = referenceCanvas.getContext("2d");
+        const colors = getThemeColors();
+        const w = referenceCanvas.width;
+        const h = referenceCanvas.height;
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = colors.paper;
+        ctx.fillRect(0, 0, w, h);
+        drawPaperGrid(ctx, w, h, colors);
+
+        ctx.fillStyle = colors.ink;
+        ctx.font = `${28 * window.devicePixelRatio}px Microsoft YaHei, sans-serif`;
+        ctx.textAlign = "left";
+        ctx.fillText(`${meta.card.replace("_", " ")} · ${meta.label}`, w * 0.08, h * 0.12);
+
+        ctx.font = `${17 * window.devicePixelRatio}px Microsoft YaHei, sans-serif`;
+        wrapText(ctx, meta.rule, w * 0.08, h * 0.18, w * 0.52, 26 * window.devicePixelRatio, colors.muted);
+
+        const mapX = w * 0.08;
+        const mapY = h * 0.28;
+        const mapW = w * 0.58;
+        const mapH = h * 0.56;
+        ctx.save();
+        ctx.translate(mapX, mapY);
+        drawMapFrame(ctx, mapW, mapH, colors);
+        const grid = core.sampleGrid(state.terrain, 91, params());
+        for (const level of core.contourLevels(grid.min, grid.max, state.interval)) {
+          drawContourLevel(ctx, grid, level, mapW, mapH, colors, level % 500 === 0);
+        }
+        drawSpecialMarks(ctx, mapW, mapH, colors);
+        ctx.restore();
+
+        drawInsetTerrain(ctx, w * 0.72, h * 0.3, w * 0.2, h * 0.48, colors);
+      }
+
+      function wrapText(ctx, text, x, y, maxWidth, lineHeight, color) {
+        ctx.fillStyle = color;
+        let line = "";
+        let lineY = y;
+        for (const char of text) {
+          const testLine = line + char;
+          if (ctx.measureText(testLine).width > maxWidth && line) {
+            ctx.fillText(line, x, lineY);
+            line = char;
+            lineY += lineHeight;
+          } else {
+            line = testLine;
+          }
+        }
+        if (line) ctx.fillText(line, x, lineY);
+      }
+
+      function drawInsetTerrain(ctx, x, y, width, height, colors) {
+        const grid = core.sampleGrid(state.terrain, 40, params());
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.fillStyle = colorWithAlpha(colors.accent, 0.12);
+        ctx.strokeStyle = colorWithAlpha(colors.accent, 0.65);
+        ctx.lineWidth = 2 * window.devicePixelRatio;
+        ctx.beginPath();
+        ctx.roundRect(0, 0, width, height, 8 * window.devicePixelRatio);
+        ctx.fill();
+        ctx.stroke();
+
+        for (let row = 0; row < grid.size; row += 3) {
+          ctx.beginPath();
+          for (let col = 0; col < grid.size; col += 1) {
+            const value = grid.values[row * grid.size + col];
+            const px = (col / (grid.size - 1)) * width;
+            const py = height * 0.78 - (row / (grid.size - 1)) * height * 0.36 - ((value - grid.min) / Math.max(1, grid.max - grid.min)) * height * 0.42;
+            if (col === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.strokeStyle = row % 9 === 0 ? colors.contourStrong : colors.contour;
+          ctx.lineWidth = row % 9 === 0 ? 1.5 * window.devicePixelRatio : window.devicePixelRatio;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function startSliceAnimation() {
+        if (!renderer) return;
+        window.clearInterval(state.sliceTimer);
+        clearGroup(historyGroup);
+        state.sliceLevels = [];
+        state.sliceIndex = -1;
+        const grid = core.sampleGrid(state.terrain, gridSize, params());
+        const levels = core.contourLevels(grid.min, grid.max, state.interval);
+        slicePlane.visible = true;
+        byId("sliceHeight").textContent = "切面：准备";
+
+        state.sliceTimer = window.setInterval(function () {
+          state.sliceIndex += 1;
+          if (state.sliceIndex >= levels.length) {
+            window.clearInterval(state.sliceTimer);
+            byId("sliceHeight").textContent = "切面：历史轨迹完成";
+            return;
+          }
+          const level = levels[state.sliceIndex];
+          state.sliceLevels.push(level);
+          slicePlane.position.y = heightToY(level);
+          historyGroup.add(lineSegmentsForLevel(grid, level, 0x51c9e6, 1, 0.12));
+          byId("sliceHeight").textContent = `切面：${Math.round(level)}m`;
+          drawContourCanvas();
+        }, state.terrain === "cliff" ? 520 : 340);
+      }
+
+      function resetView() {
+        state.view = "orbit";
+        state.camera.radius = 12;
+        state.camera.theta = Math.PI * 0.78;
+        state.camera.phi = Math.PI * 0.32;
+        viewButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.view === "orbit"));
+      }
+
+      function drawCanvasFallback() {
+        resizeCanvasToDisplaySize(terrainCanvas);
+        const ctx = terrainCanvas.getContext("2d");
+        const colors = getThemeColors();
+        ctx.fillStyle = "#101816";
+        ctx.fillRect(0, 0, terrainCanvas.width, terrainCanvas.height);
+        ctx.fillStyle = "#f7f1df";
+        ctx.font = `${18 * window.devicePixelRatio}px Microsoft YaHei, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText("Three.js 未加载，右侧卷面图仍可用于讲解。", terrainCanvas.width / 2, terrainCanvas.height / 2);
+        drawContourCanvas();
+        drawReferenceCard();
+        updateCopy();
+      }
+
+      function updateCopy() {
+        const meta = currentMeta();
+        const titlePrefix = meta.card.split("_")[0];
+        byId("cardTitle").textContent = `${titlePrefix} ${meta.label}参考卡`;
+        byId("terrainName").textContent = meta.label;
+        byId("terrainRule").textContent = meta.rule;
+        byId("teacherNote").innerHTML = `<strong>当前讲解：</strong>${meta.proverb}。`;
+        byId("contourStatus").textContent = `等高距 ${state.interval}m`;
+        byId("legendPrimary").textContent = meta.rule;
+        byId("legendSecondary").textContent = `${meta.label}、2D 等高线和切面轨迹共用同一个 h(x,z)。`;
+      }
+
+      function bindEvents() {
+        terrainButtons.forEach((button) => {
+          button.addEventListener("click", function () {
+            state.terrain = button.dataset.terrain;
+            terrainButtons.forEach((item) => item.classList.toggle("is-active", item === button));
+            updateScene();
+          });
+        });
+
+        viewButtons.forEach((button) => {
+          button.addEventListener("click", function () {
+            state.view = button.dataset.view;
+            viewButtons.forEach((item) => item.classList.toggle("is-active", item === button));
+            updateCameraForView();
+          });
+        });
+
+        byId("sliceButton").addEventListener("click", startSliceAnimation);
+        byId("resetButton").addEventListener("click", resetView);
+        byId("themeToggle").addEventListener("click", function () {
+          state.theme = state.theme === "exam" ? "geo" : "exam";
+          document.body.dataset.theme = state.theme;
+          byId("themeToggle").textContent = state.theme === "exam" ? "自然地理主题" : "高考教辅主题";
+          updateScene();
+        });
+
+        byId("reliefRange").addEventListener("input", function (event) {
+          state.relief = Number(event.target.value);
+          updateScene();
+        });
+        byId("verticalRange").addEventListener("input", function (event) {
+          state.verticalScale = Number(event.target.value);
+          updateScene();
+        });
+        byId("intervalRange").addEventListener("input", function (event) {
+          state.interval = Number(event.target.value);
+          updateScene();
+        });
+
+        window.addEventListener("resize", function () {
+          drawContourCanvas();
+          drawReferenceCard();
+        });
+      }
+
+      if (!CanvasRenderingContext2D.prototype.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function (x, y, width, height, radius) {
+          const r = Math.min(radius, width / 2, height / 2);
+          this.moveTo(x + r, y);
+          this.arcTo(x + width, y, x + width, y + height, r);
+          this.arcTo(x + width, y + height, x, y + height, r);
+          this.arcTo(x, y + height, x, y, r);
+          this.arcTo(x, y, x + width, y, r);
+          return this;
+        };
+      }
+
+      bindEvents();
+      initThree();
+    })();
+  </script>
+</body>
+</html>
