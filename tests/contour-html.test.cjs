@@ -123,3 +123,15 @@ test("contour.html exposes stage 8 application scenarios", () => {
   assert.match(html, /高地缓坡/);
   assert.match(html, /林牧区/);
 });
+
+test("contour.html exposes stage 9 classroom stability controls", () => {
+  const html = fs.readFileSync(htmlPath, "utf8");
+  assert.match(html, /mobile-tabs/);
+  assert.match(html, /data-mobile-tab="terrain"/);
+  assert.match(html, /data-mobile-panel="reference"/);
+  assert.match(html, /setMobilePanel/);
+  assert.match(html, /terrainGridSize/);
+  assert.match(html, /课堂试讲检查/);
+  assert.match(html, /投屏/);
+  assert.match(html, /移动端/);
+});

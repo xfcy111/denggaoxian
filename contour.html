@@ -108,6 +108,7 @@
 
     .mode-switcher,
     .terrain-switcher,
+    .mobile-tabs,
     .map-tool-switcher,
     .view-switcher,
     .utility-actions {
@@ -119,6 +120,7 @@
 
     .mode-button,
     .terrain-button,
+    .mobile-tab,
     .tool-button,
     .view-button,
     .utility-button {
@@ -135,6 +137,7 @@
 
     .mode-button:hover,
     .terrain-button:hover,
+    .mobile-tab:hover,
     .tool-button:hover,
     .view-button:hover,
     .utility-button:hover {
@@ -144,11 +147,17 @@
 
     .mode-button.is-active,
     .terrain-button.is-active,
+    .mobile-tab.is-active,
     .tool-button.is-active,
     .view-button.is-active {
       background: var(--accent);
       border-color: var(--accent);
       color: #fff;
+    }
+
+    .mobile-tabs {
+      display: none;
+      padding: 10px 14px 0;
     }
 
     .workspace {
@@ -452,6 +461,23 @@
         grid-template-columns: 1fr;
       }
 
+      .mobile-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .workspace > [data-mobile-panel]:not(.is-mobile-active) {
+        display: none;
+      }
+
+      .workspace > .panel.is-mobile-active {
+        display: grid;
+      }
+
+      .workspace > .stage.is-mobile-active {
+        display: flex;
+      }
+
       #terrainCanvas {
         min-height: 420px;
       }
@@ -512,8 +538,14 @@
       </div>
     </header>
 
+    <nav class="mobile-tabs" aria-label="移动端面板切换">
+      <button class="mobile-tab is-active" type="button" data-mobile-tab="terrain">3D地形</button>
+      <button class="mobile-tab" type="button" data-mobile-tab="reference">参考卡</button>
+      <button class="mobile-tab" type="button" data-mobile-tab="contour">卷面图</button>
+    </nav>
+
     <section class="workspace" aria-label="等高线互动讲解工作区">
-      <aside class="panel reference-panel">
+      <aside class="panel reference-panel" data-mobile-panel="reference">
         <div class="panel-header">
           <h2 id="cardTitle">A1 山峰参考卡</h2>
           <span id="cardStatus">待接入 GPT 图</span>
@@ -540,7 +572,7 @@
         </div>
       </aside>
 
-      <section class="stage" aria-label="Three.js 3D 地形">
+      <section class="stage is-mobile-active" aria-label="Three.js 3D 地形" data-mobile-panel="terrain">
         <canvas id="terrainCanvas"></canvas>
         <div class="stage-overlay">
           <div class="stage-readout">
@@ -554,7 +586,7 @@
         </div>
       </section>
 
-      <aside class="panel contour-panel">
+      <aside class="panel contour-panel" data-mobile-panel="contour">
         <div class="panel-header">
           <h2>2D 等高线卷面图</h2>
           <span id="contourStatus">等高距 100m</span>
@@ -577,6 +609,7 @@
             <li><span class="dot orange"></span><span>计曲线加粗，投屏时优先读粗线数字。</span></li>
             <li><span class="dot blue"></span><span id="legendSecondary">3D 与 2D 共用同一个 h(x,z)。</span></li>
             <li><span class="dot green"></span><span>通视判断：绿线可见，红线不通视；阻挡点会同步标记。</span></li>
+            <li><span class="dot orange"></span><span>课堂试讲检查：投屏读数清晰，移动端三面板可切换，性能降采样已启用。</span></li>
           </ul>
           <div class="view-switcher" aria-label="视角切换">
             <button class="view-button is-active" type="button" data-view="orbit">斜视地形</button>
@@ -609,6 +642,8 @@
       const terrainSwitcher = document.querySelector(".terrain-switcher");
       const modeButtons = Array.from(document.querySelectorAll("[data-mode]"));
       let terrainButtons = Array.from(document.querySelectorAll("[data-terrain]"));
+      const mobileTabButtons = Array.from(document.querySelectorAll("[data-mobile-tab]"));
+      const mobilePanels = Array.from(document.querySelectorAll("[data-mobile-panel]"));
       const viewButtons = Array.from(document.querySelectorAll("[data-view]"));
       const mapToolButtons = Array.from(document.querySelectorAll("[data-map-tool]"));
       const APPLICATION_CARD_ORDER = ["C1_reservoir_site", "C2_road_route", "C3_campsite_site", "C4_agriculture_layout"];
@@ -658,6 +693,7 @@
         mapTool: "point",
         activeSlogan: null,
         selectedPoint: null,
+        mobilePanel: "terrain",
         profileStart: null,
         profileEnd: null,
         sliceLevels: [],
@@ -681,6 +717,7 @@
       let slicePlane;
       let dragState = null;
       const gridSize = 121;
+      let lastTerrainGridSize = gridSize;
 
       function byId(id) {
         return document.getElementById(id);
@@ -704,6 +741,23 @@
       function currentSightResult() {
         if (!state.profileStart || !state.profileEnd) return null;
         return core.lineOfSight(state.terrain, state.profileStart, state.profileEnd, 100, params());
+      }
+
+      function terrainGridSize() {
+        return window.matchMedia("(max-width: 1080px)").matches ? 81 : gridSize;
+      }
+
+      function setMobilePanel(panel) {
+        state.mobilePanel = panel;
+        mobileTabButtons.forEach((button) => {
+          button.classList.toggle("is-active", button.dataset.mobileTab === panel);
+        });
+        mobilePanels.forEach((item) => {
+          item.classList.toggle("is-mobile-active", item.dataset.mobilePanel === panel);
+        });
+        drawContourCanvas();
+        drawProfileCanvas();
+        drawReferenceCard();
       }
 
       function renderTerrainButtons() {
@@ -880,7 +934,9 @@
         if (state.profileEnd) {
           state.profileEnd.height = core.heightAt(state.terrain, state.profileEnd.x, state.profileEnd.z, params());
         }
-        const grid = core.sampleGrid(state.terrain, gridSize, params());
+        const activeGridSize = terrainGridSize();
+        lastTerrainGridSize = activeGridSize;
+        const grid = core.sampleGrid(state.terrain, activeGridSize, params());
         if (terrainMesh) {
           terrainMesh.geometry.dispose();
           terrainMesh.material.dispose();
@@ -2096,6 +2152,12 @@
           });
         });
 
+        mobileTabButtons.forEach((button) => {
+          button.addEventListener("click", function () {
+            setMobilePanel(button.dataset.mobileTab);
+          });
+        });
+
         document.querySelector(".slogan-row").addEventListener("click", function (event) {
           const button = event.target.closest("[data-slogan]");
           if (!button) return;
@@ -2130,6 +2192,11 @@
         });
 
         window.addEventListener("resize", function () {
+          setMobilePanel(state.mobilePanel);
+          if (terrainGridSize() !== lastTerrainGridSize) {
+            updateScene();
+            return;
+          }
           drawContourCanvas();
           drawProfileCanvas();
           drawReferenceCard();
@@ -2149,6 +2216,7 @@
       }
 
       renderTerrainButtons();
+      setMobilePanel(state.mobilePanel);
       bindEvents();
       initThree();
     })();
