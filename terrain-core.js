@@ -102,6 +102,30 @@
       rule: "口小肚大，坝址横跨峡谷窄口，库区位于上游",
       proverb: "坝修窄口，库蓄宽肚",
     },
+    {
+      id: "road_route",
+      mode: "application",
+      label: "公路选线",
+      card: "C2_road_route",
+      rule: "公路线尽量沿等高线，避开陡坡、陡崖和深切河谷",
+      proverb: "路随线走，避陡绕谷",
+    },
+    {
+      id: "campsite_site",
+      mode: "application",
+      label: "宿营地选址",
+      card: "C3_campsite_site",
+      rule: "宿营地选高地缓坡，避开河谷、陡坡和陡崖",
+      proverb: "高地缓坡，远离河谷",
+    },
+    {
+      id: "agriculture_layout",
+      mode: "application",
+      label: "农业布局",
+      card: "C4_agriculture_layout",
+      rule: "平缓低地宜种植，山地丘陵宜林牧，水域低洼宜水产",
+      proverb: "平种山牧，水域养殖",
+    },
   ];
 
   const DEFAULT_PARAMS = {
@@ -222,6 +246,28 @@
         const upstreamRim = 340 * smoothstep(0.28, 0.95, z);
         const pocketLow = 115 * gaussian(x, z, -0.18, 0.45, 0.48, 0.34);
         height = 260 + sideHills + upstreamRim + 110 * downstream - relief * (valleyFloor + pocketLow);
+        break;
+      }
+      case "road_route": {
+        const regionalSlope = 145 * ((z + 1) / 2);
+        const ridgeBarrier = 230 * Math.exp(-Math.pow(x - 0.18, 2) / 0.05) * smoothstep(-0.2, 0.9, z);
+        const valleyCut = 155 * Math.exp(-Math.pow(x + 0.42, 2) / 0.045) * Math.exp(-Math.pow(z - 0.3, 2) / 0.34);
+        const bench = 55 * Math.exp(-Math.pow(z + 0.28 + 0.12 * Math.sin(x * Math.PI), 2) / 0.025);
+        height = 285 + regionalSlope + ridgeBarrier - valleyCut + bench + 18 * Math.sin(x * Math.PI * 1.4);
+        break;
+      }
+      case "campsite_site": {
+        const riverValley = 280 * Math.exp(-(x * x) / 0.035) * Math.exp(-Math.pow(z - 0.35, 2) / 0.44);
+        const bench = 145 * gaussian(x, z, 0.36, -0.3, 0.34, 0.28);
+        const steepBack = 260 * smoothstep(0.45, 0.95, Math.max(Math.abs(x + 0.52), Math.abs(z + 0.58)));
+        height = 330 + 115 * ((z + 1) / 2) + relief * (bench + steepBack - riverValley);
+        break;
+      }
+      case "agriculture_layout": {
+        const plainField = 110 * gaussian(x, z, -0.42, -0.35, 0.52, 0.38);
+        const hillPasture = 235 * gaussian(x, z, 0.62, 0.52, 0.44, 0.4);
+        const waterLow = 95 * gaussian(x, z, 0.1, -0.68, 0.36, 0.22);
+        height = 210 + 70 * ((x + z + 2) / 4) - relief * plainField - waterLow + relief * hillPasture;
         break;
       }
       default:

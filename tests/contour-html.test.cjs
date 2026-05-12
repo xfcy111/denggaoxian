@@ -110,3 +110,16 @@ test("contour.html exposes stage 7 static flow arrows for water-system teaching"
   assert.match(html, /流向与等高线凸出方向相反/);
   assert.match(html, /河流经窄口下泄/);
 });
+
+test("contour.html exposes stage 8 application scenarios", () => {
+  const html = fs.readFileSync(htmlPath, "utf8");
+  assert.match(html, /C2_road_route/);
+  assert.match(html, /C3_campsite_site/);
+  assert.match(html, /C4_agriculture_layout/);
+  assert.match(html, /公路选线/);
+  assert.match(html, /宿营地选址/);
+  assert.match(html, /农业布局/);
+  assert.match(html, /避开陡坡/);
+  assert.match(html, /高地缓坡/);
+  assert.match(html, /林牧区/);
+});

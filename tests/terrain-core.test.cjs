@@ -27,6 +27,9 @@ test("terrain library exposes A, B, and C teaching mode landform types", () => {
     "plateau",
     "large_basin",
     "reservoir_site",
+    "road_route",
+    "campsite_site",
+    "agriculture_layout",
   ]);
 });
 
@@ -167,4 +170,18 @@ test("large basin and reservoir site preserve application teaching logic", () =>
   assert.ok(h("large_basin", 0, 0) < h("large_basin", 0.85, 0.85));
   assert.ok(h("reservoir_site", -0.45, 0) < h("reservoir_site", 0.55, 0.62));
   assert.ok(h("reservoir_site", 0.1, 0) < h("reservoir_site", 0.1, 0.8));
+});
+
+test("stage 8 application scenarios encode route, campsite, and agriculture logic", () => {
+  const roadStart = h("road_route", -0.75, -0.4);
+  const roadEnd = h("road_route", 0.75, -0.12);
+  const campBench = h("campsite_site", 0.36, -0.3);
+  const valleyFloor = h("campsite_site", 0, 0.45);
+  const field = h("agriculture_layout", -0.45, -0.35);
+  const hill = h("agriculture_layout", 0.72, 0.58);
+
+  assert.ok(Math.abs(roadStart - roadEnd) < 130);
+  assert.ok(campBench > valleyFloor + 80);
+  assert.ok(field < 260);
+  assert.ok(hill > field + 120);
 });

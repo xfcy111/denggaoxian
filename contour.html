@@ -611,6 +611,7 @@
       let terrainButtons = Array.from(document.querySelectorAll("[data-terrain]"));
       const viewButtons = Array.from(document.querySelectorAll("[data-view]"));
       const mapToolButtons = Array.from(document.querySelectorAll("[data-map-tool]"));
+      const APPLICATION_CARD_ORDER = ["C1_reservoir_site", "C2_road_route", "C3_campsite_site", "C4_agriculture_layout"];
       const MODE_META = {
         landform: {
           label: "部位判读",
@@ -624,8 +625,8 @@
         },
         application: {
           label: "应用选址",
-          ids: ["reservoir_site"],
-          note: "水库坝址先找峡谷窄口，再看上游是否有宽阔库区。",
+          ids: ["reservoir_site", "road_route", "campsite_site", "agriculture_layout"],
+          note: "应用题先把等高线判读转成约束：避开陡坡、利用缓坡、顺应水系。",
         },
       };
       const SLOGAN_ORDER = ["bend", "slope", "closed"];
@@ -1210,6 +1211,72 @@
           label(ctx, "拟建坝址", width * 0.62, height * 0.58, colors);
           label(ctx, "库区", width * 0.46, height * 0.28, colors);
           label(ctx, "河流", width * 0.55, height * 0.74, colors);
+        }
+
+        if (state.terrain === "road_route") {
+          const route = [
+            toCanvas(-0.82, -0.42, width, height),
+            toCanvas(-0.52, -0.34, width, height),
+            toCanvas(-0.16, -0.28, width, height),
+            toCanvas(0.22, -0.22, width, height),
+            toCanvas(0.54, -0.17, width, height),
+            toCanvas(0.82, -0.11, width, height),
+          ];
+          ctx.strokeStyle = colors.green;
+          ctx.lineWidth = 4 * window.devicePixelRatio;
+          ctx.beginPath();
+          route.forEach((p, index) => {
+            if (index === 0) ctx.moveTo(p.x, p.y);
+            else ctx.lineTo(p.x, p.y);
+          });
+          ctx.stroke();
+
+          ctx.strokeStyle = colors.danger;
+          ctx.setLineDash([8 * window.devicePixelRatio, 6 * window.devicePixelRatio]);
+          ctx.strokeRect(width * 0.56, height * 0.34, width * 0.18, height * 0.22);
+          ctx.setLineDash([]);
+          label(ctx, "公路选线", width * 0.32, height * 0.39, colors);
+          label(ctx, "沿等高线", width * 0.57, height * 0.46, colors);
+          label(ctx, "避开陡坡", width * 0.67, height * 0.33, colors);
+        }
+
+        if (state.terrain === "campsite_site") {
+          const river = [toCanvas(0, -0.82, width, height), toCanvas(0.02, -0.38, width, height), toCanvas(0, 0.1, width, height), toCanvas(-0.02, 0.78, width, height)];
+          ctx.strokeStyle = colors.blue;
+          ctx.lineWidth = 3 * window.devicePixelRatio;
+          ctx.beginPath();
+          river.forEach((p, index) => {
+            if (index === 0) ctx.moveTo(p.x, p.y);
+            else ctx.lineTo(p.x, p.y);
+          });
+          ctx.stroke();
+
+          const camp = toCanvas(0.36, -0.3, width, height);
+          ctx.fillStyle = colorWithAlpha(colors.green, 0.18);
+          ctx.beginPath();
+          ctx.arc(camp.x, camp.y, 42 * window.devicePixelRatio, 0, Math.PI * 2);
+          ctx.fill();
+          drawTriangle(ctx, camp.x, camp.y - 6 * window.devicePixelRatio, 13 * window.devicePixelRatio, colors.green);
+          ctx.fillStyle = colorWithAlpha(colors.danger, 0.16);
+          ctx.fillRect(width * 0.44, height * 0.52, width * 0.14, height * 0.34);
+          label(ctx, "宿营地选址", width * 0.67, height * 0.33, colors);
+          label(ctx, "高地缓坡", width * 0.64, height * 0.24, colors);
+          label(ctx, "避开河谷", width * 0.47, height * 0.72, colors);
+        }
+
+        if (state.terrain === "agriculture_layout") {
+          ctx.fillStyle = colorWithAlpha(colors.green, 0.18);
+          ctx.fillRect(width * 0.16, height * 0.54, width * 0.26, height * 0.24);
+          ctx.fillStyle = colorWithAlpha(colors.accent2, 0.2);
+          ctx.fillRect(width * 0.58, height * 0.18, width * 0.25, height * 0.26);
+          ctx.fillStyle = colorWithAlpha(colors.blue, 0.2);
+          ctx.beginPath();
+          ctx.ellipse(width * 0.54, height * 0.79, width * 0.18, height * 0.08, -0.12, 0, Math.PI * 2);
+          ctx.fill();
+          label(ctx, "农业布局", width * 0.5, height * 0.12, colors);
+          label(ctx, "种植区", width * 0.29, height * 0.66, colors);
+          label(ctx, "林牧区", width * 0.7, height * 0.32, colors);
+          label(ctx, "水产区", width * 0.54, height * 0.79, colors);
         }
         drawFlowArrows(ctx, width, height, colors);
         ctx.restore();
@@ -1808,7 +1875,7 @@
         byId("contourStatus").textContent = `等高距 ${state.interval}m`;
         byId("legendPrimary").textContent = meta.rule;
         byId("legendSecondary").textContent = `${mode.label}中的 ${meta.label}、2D 等高线和切面轨迹共用同一个 h(x,z)。`;
-        byId("scalePill").textContent = state.mode === "application" ? "示范：坝址线 / 库区 / 河流" : "比例尺：示意 1格≈200m";
+        byId("scalePill").textContent = state.mode === "application" ? "应用：选线 / 选址 / 布局" : "比例尺：示意 1格≈200m";
         renderSlogans();
         updateTeacherNote();
         updatePointReadout();
@@ -1838,6 +1905,18 @@
         }
         if (state.terrain === "reservoir_site") {
           byId("teacherNote").innerHTML = "<strong>水库坝址：</strong>河流经窄口下泄，坝址横跨峡谷窄口，上游宽阔低地形成库区。";
+          return;
+        }
+        if (state.terrain === "road_route") {
+          byId("teacherNote").innerHTML = "<strong>公路选线：</strong>路线尽量沿等高线延展，避开陡坡、深谷和高阻隔，减少开挖与爬坡。";
+          return;
+        }
+        if (state.terrain === "campsite_site") {
+          byId("teacherNote").innerHTML = "<strong>宿营地选址：</strong>优先选择高地缓坡，便于排水和搭建，同时避开河谷洪水、陡坡落石和陡崖边缘。";
+          return;
+        }
+        if (state.terrain === "agriculture_layout") {
+          byId("teacherNote").innerHTML = "<strong>农业布局：</strong>低平缓坡布置种植区，山地丘陵布置林牧区，低洼水域布置水产区。";
           return;
         }
         byId("teacherNote").innerHTML = `<strong>${mode.label}：</strong>${meta.proverb}。${mode.note}`;
