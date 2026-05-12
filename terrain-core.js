@@ -358,10 +358,53 @@
     };
   }
 
+  function flowVector(type, x, z, overrides) {
+    const step = 0.012;
+    const left = heightAt(type, clamp(x - step, -1, 1), z, overrides);
+    const right = heightAt(type, clamp(x + step, -1, 1), z, overrides);
+    const down = heightAt(type, x, clamp(z - step, -1, 1), overrides);
+    const up = heightAt(type, x, clamp(z + step, -1, 1), overrides);
+    const gradX = (right - left) / (Math.min(1, x + step) - Math.max(-1, x - step) || step * 2);
+    const gradZ = (up - down) / (Math.min(1, z + step) - Math.max(-1, z - step) || step * 2);
+    const magnitude = Math.hypot(gradX, gradZ);
+
+    if (magnitude < 1e-6) {
+      return { x: 0, z: 0, dx: 0, dz: 0, magnitude };
+    }
+
+    const dx = -gradX / magnitude;
+    const dz = -gradZ / magnitude;
+    return {
+      x: dx,
+      z: dz,
+      dx,
+      dz,
+      magnitude,
+    };
+  }
+
+  function flowField(type, points, overrides) {
+    const minMagnitude = 1;
+    return (points || [])
+      .map((point) => {
+        const vector = flowVector(type, point.x, point.z, overrides);
+        return {
+          x: point.x,
+          z: point.z,
+          dx: vector.dx,
+          dz: vector.dz,
+          magnitude: vector.magnitude,
+        };
+      })
+      .filter((arrow) => arrow.magnitude >= minMagnitude);
+  }
+
   return {
     TERRAIN_TYPES,
     contourLevels,
     contourSegments,
+    flowField,
+    flowVector,
     heightAt,
     lineOfSight,
     profileSamples,

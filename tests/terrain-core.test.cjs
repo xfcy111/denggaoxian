@@ -103,6 +103,40 @@ test("lineOfSight marks the first terrain obstruction on a blocked A-B profile",
   assert.equal(result.obstruction, result.samples.find((sample) => sample.blocked));
 });
 
+test("flowVector follows local downslope direction from heightAt", () => {
+  const valleyFlow = core.flowVector("valley", 0, 0.35);
+  const basinFlow = core.flowVector("basin", 0.55, 0);
+
+  assert.ok(valleyFlow.dz < -0.2);
+  assert.ok(Math.abs(valleyFlow.dx) < 0.35);
+  assert.ok(basinFlow.dx < -0.65);
+  assert.ok(Math.abs(basinFlow.dz) < 0.25);
+  assert.equal(valleyFlow.x, valleyFlow.dx);
+  assert.equal(valleyFlow.z, valleyFlow.dz);
+  assert.ok(valleyFlow.magnitude > 0);
+  assert.ok(basinFlow.magnitude > 0);
+});
+
+test("flowField returns finite arrows and filters near-flat points", () => {
+  const arrows = core.flowField("large_basin", [
+    { x: 0.7, z: 0 },
+    { x: 0, z: 0.7 },
+    { x: 0, z: 0 },
+  ]);
+  const flat = core.flowField("basin", [{ x: 0.4, z: 0 }], { verticalScale: 0 });
+
+  assert.ok(arrows.length >= 2);
+  assert.equal(flat.length, 0);
+  for (const arrow of arrows) {
+    assert.ok(Number.isFinite(arrow.x));
+    assert.ok(Number.isFinite(arrow.z));
+    assert.ok(Number.isFinite(arrow.dx));
+    assert.ok(Number.isFinite(arrow.dz));
+    assert.ok(Number.isFinite(arrow.magnitude));
+    assert.ok(Math.hypot(arrow.dx, arrow.dz) > 0.99);
+  }
+});
+
 test("terrain metadata binds each landform to its planned reference card", () => {
   for (const item of core.TERRAIN_TYPES) {
     assert.match(item.card, /^[ABC][1-6]_/);

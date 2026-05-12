@@ -100,3 +100,13 @@ test("contour.html exposes stage 6B line-of-sight feedback on the A-B profile", 
   assert.match(html, /阻挡点/);
   assert.match(html, /通视判断/);
 });
+
+test("contour.html exposes stage 7 static flow arrows for water-system teaching", () => {
+  const html = fs.readFileSync(htmlPath, "utf8");
+  assert.match(html, /drawFlowArrows/);
+  assert.match(html, /flowField/);
+  assert.match(html, /data-terrain="valley"/);
+  assert.match(html, /向心状水系/);
+  assert.match(html, /流向与等高线凸出方向相反/);
+  assert.match(html, /河流经窄口下泄/);
+});

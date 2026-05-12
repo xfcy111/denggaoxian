@@ -1167,20 +1167,6 @@
 
         if (state.terrain === "large_basin") {
           const center = toCanvas(0, 0, width, height);
-          ctx.strokeStyle = colors.blue;
-          ctx.lineWidth = 2 * window.devicePixelRatio;
-          for (let i = 0; i < 8; i += 1) {
-            const angle = (Math.PI * 2 * i) / 8;
-            const start = {
-              x: center.x + Math.cos(angle) * width * 0.32,
-              y: center.y + Math.sin(angle) * height * 0.3,
-            };
-            const end = {
-              x: center.x + Math.cos(angle) * width * 0.1,
-              y: center.y + Math.sin(angle) * height * 0.09,
-            };
-            drawArrow(ctx, start.x, start.y, end.x, end.y, colors.blue);
-          }
           label(ctx, "向心水系", center.x, center.y + 28 * window.devicePixelRatio, colors);
         }
 
@@ -1224,6 +1210,67 @@
           label(ctx, "拟建坝址", width * 0.62, height * 0.58, colors);
           label(ctx, "库区", width * 0.46, height * 0.28, colors);
           label(ctx, "河流", width * 0.55, height * 0.74, colors);
+        }
+        drawFlowArrows(ctx, width, height, colors);
+        ctx.restore();
+      }
+
+      function flowSamplePointsForTerrain() {
+        if (state.terrain === "valley") {
+          return [
+            { x: -0.58, z: 0.52 },
+            { x: -0.3, z: 0.34 },
+            { x: -0.06, z: 0.16 },
+            { x: 0.18, z: -0.03 },
+            { x: 0.42, z: -0.22 },
+            { x: 0.66, z: -0.4 },
+          ];
+        }
+        if (state.terrain === "basin" || state.terrain === "large_basin") {
+          return [
+            { x: -0.62, z: 0 },
+            { x: 0.62, z: 0 },
+            { x: 0, z: -0.62 },
+            { x: 0, z: 0.62 },
+            { x: -0.44, z: -0.44 },
+            { x: 0.44, z: -0.44 },
+            { x: -0.44, z: 0.44 },
+            { x: 0.44, z: 0.44 },
+          ];
+        }
+        if (state.terrain === "reservoir_site") {
+          return [
+            { x: -0.16, z: 0.66 },
+            { x: 0.08, z: 0.48 },
+            { x: 0.1, z: 0.24 },
+            { x: 0.02, z: 0.02 },
+            { x: 0, z: -0.28 },
+            { x: 0.02, z: -0.62 },
+          ];
+        }
+        return [];
+      }
+
+      function drawFlowArrows(ctx, width, height, colors) {
+        const points = flowSamplePointsForTerrain();
+        if (!points.length) return;
+        const arrows = core.flowField(state.terrain, points, params());
+        const length = state.terrain === "large_basin" ? 0.14 : 0.16;
+
+        ctx.save();
+        ctx.lineWidth = 2.5 * window.devicePixelRatio;
+        for (const arrow of arrows) {
+          const start = toCanvas(arrow.x, arrow.z, width, height);
+          const end = toCanvas(
+            arrow.x + arrow.dx * length,
+            arrow.z + arrow.dz * length,
+            width,
+            height,
+          );
+          drawArrow(ctx, start.x, start.y, end.x, end.y, colors.blue);
+        }
+        if (state.terrain === "valley") {
+          label(ctx, "水流向低处", width * 0.35, height * 0.68, colors);
         }
         ctx.restore();
       }
@@ -1779,6 +1826,18 @@
         }
         if (state.profileStart && state.profileEnd) {
           byId("teacherNote").innerHTML = "<strong>通视判断：</strong>先看整体阻挡，再看凹坡/凸坡。右侧剖面把地形曲线和 A-B 视线放在同一坐标内，红色阻挡点表示中间地形高于视线。";
+          return;
+        }
+        if (state.terrain === "valley") {
+          byId("teacherNote").innerHTML = "<strong>水流与山谷：</strong>水流沿山谷线向低处汇流，流向与等高线凸出方向相反。";
+          return;
+        }
+        if (state.terrain === "basin" || state.terrain === "large_basin") {
+          byId("teacherNote").innerHTML = "<strong>向心状水系：</strong>盆地四周高中间低，水流箭头由坡面指向中心低地。";
+          return;
+        }
+        if (state.terrain === "reservoir_site") {
+          byId("teacherNote").innerHTML = "<strong>水库坝址：</strong>河流经窄口下泄，坝址横跨峡谷窄口，上游宽阔低地形成库区。";
           return;
         }
         byId("teacherNote").innerHTML = `<strong>${mode.label}：</strong>${meta.proverb}。${mode.note}`;
