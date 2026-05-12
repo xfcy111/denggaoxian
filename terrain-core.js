@@ -330,11 +330,40 @@
     return samples;
   }
 
+  function lineOfSight(type, start, end, count, overrides) {
+    const samples = profileSamples(type, start, end, count || 100, overrides);
+    const startHeight = samples[0].height;
+    const endHeight = samples[samples.length - 1].height;
+    const tolerance = 0.5;
+    let obstruction = null;
+    let clearanceMin = Infinity;
+
+    for (const sample of samples) {
+      sample.sightHeight = startHeight + (endHeight - startHeight) * sample.t;
+      sample.clearance = sample.sightHeight - sample.height;
+      sample.blocked = sample.t > 0 && sample.t < 1 && sample.clearance < -tolerance;
+      if (sample.t > 0 && sample.t < 1) {
+        clearanceMin = Math.min(clearanceMin, sample.clearance);
+      }
+      if (!obstruction && sample.blocked) {
+        obstruction = sample;
+      }
+    }
+
+    return {
+      visible: obstruction === null,
+      obstruction,
+      clearanceMin: clearanceMin === Infinity ? 0 : clearanceMin,
+      samples,
+    };
+  }
+
   return {
     TERRAIN_TYPES,
     contourLevels,
     contourSegments,
     heightAt,
+    lineOfSight,
     profileSamples,
     sampleGrid,
   };

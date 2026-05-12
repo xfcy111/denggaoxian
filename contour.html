@@ -325,6 +325,10 @@
       background: var(--blue);
     }
 
+    .dot.green {
+      background: var(--green);
+    }
+
     .controls-strip {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -572,6 +576,7 @@
             <li><span class="dot"></span><span id="legendPrimary">同一高度点连成线，数值向山顶递增。</span></li>
             <li><span class="dot orange"></span><span>计曲线加粗，投屏时优先读粗线数字。</span></li>
             <li><span class="dot blue"></span><span id="legendSecondary">3D 与 2D 共用同一个 h(x,z)。</span></li>
+            <li><span class="dot green"></span><span>通视判断：绿线可见，红线不通视；阻挡点会同步标记。</span></li>
           </ul>
           <div class="view-switcher" aria-label="视角切换">
             <button class="view-button is-active" type="button" data-view="orbit">斜视地形</button>
@@ -693,6 +698,11 @@
 
       function currentMode() {
         return MODE_META[state.mode];
+      }
+
+      function currentSightResult() {
+        if (!state.profileStart || !state.profileEnd) return null;
+        return core.lineOfSight(state.terrain, state.profileStart, state.profileEnd, 100, params());
       }
 
       function renderTerrainButtons() {
@@ -999,6 +1009,7 @@
 
         drawSpecialMarks(ctx, plotW, plotH, colors);
         drawProfileSelection(ctx, plotW, plotH, colors);
+        drawSightSelection(ctx, plotW, plotH, colors);
         drawSelectedPoint(ctx, plotW, plotH, colors);
         ctx.restore();
       }
@@ -1279,6 +1290,35 @@
         ctx.restore();
       }
 
+      function drawSightSelection(ctx, width, height, colors) {
+        const sight = currentSightResult();
+        if (!sight) return;
+        const start = toCanvas(state.profileStart.x, state.profileStart.z, width, height);
+        const end = toCanvas(state.profileEnd.x, state.profileEnd.z, width, height);
+        const lineColor = sight.visible ? colors.green : colors.danger;
+
+        ctx.save();
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = 4 * window.devicePixelRatio;
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+        ctx.stroke();
+
+        if (sight.obstruction) {
+          const block = toCanvas(sight.obstruction.x, sight.obstruction.z, width, height);
+          ctx.fillStyle = colors.danger;
+          ctx.strokeStyle = colors.paper;
+          ctx.lineWidth = 2 * window.devicePixelRatio;
+          ctx.beginPath();
+          ctx.arc(block.x, block.y, 8 * window.devicePixelRatio, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          label(ctx, "阻挡点", block.x + 36 * window.devicePixelRatio, block.y - 22 * window.devicePixelRatio, colors);
+        }
+        ctx.restore();
+      }
+
       function drawProfilePointLabel(ctx, point, text, radius, color, colors) {
         ctx.fillStyle = color;
         ctx.strokeStyle = color;
@@ -1332,9 +1372,11 @@
         }
 
         const samples = core.profileSamples(state.terrain, state.profileStart, state.profileEnd, 90, params());
+        const sight = currentSightResult();
         const heights = samples.map((sample) => sample.height);
-        const minHeight = Math.min(...heights);
-        const maxHeight = Math.max(...heights);
+        const sightHeights = sight ? sight.samples.map((sample) => sample.sightHeight) : [];
+        const minHeight = Math.min(...heights, ...sightHeights);
+        const maxHeight = Math.max(...heights, ...sightHeights);
         const range = Math.max(40, maxHeight - minHeight);
         const low = minHeight - range * 0.12;
         const high = maxHeight + range * 0.12;
@@ -1363,6 +1405,10 @@
         });
         ctx.stroke();
 
+        if (sight) {
+          drawSightLineOnProfile(ctx, sight, toX, toY, colors);
+        }
+
         ctx.fillStyle = colors.green;
         ctx.beginPath();
         ctx.arc(toX(samples[0]), toY(samples[0]), 5 * window.devicePixelRatio, 0, Math.PI * 2);
@@ -1384,6 +1430,43 @@
         updateProfileReadout();
       }
 
+      function drawSightLineOnProfile(ctx, sight, toX, toY, colors) {
+        const lineColor = sight.visible ? colors.green : colors.danger;
+        const first = sight.samples[0];
+        const last = sight.samples[sight.samples.length - 1];
+
+        ctx.save();
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = 2.6 * window.devicePixelRatio;
+        ctx.setLineDash([10 * window.devicePixelRatio, 7 * window.devicePixelRatio]);
+        ctx.beginPath();
+        ctx.moveTo(toX(first), toY({ height: first.sightHeight }));
+        ctx.lineTo(toX(last), toY({ height: last.sightHeight }));
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        if (sight.obstruction) {
+          const x = toX(sight.obstruction);
+          const terrainY = toY(sight.obstruction);
+          const sightY = toY({ height: sight.obstruction.sightHeight });
+          ctx.strokeStyle = colors.danger;
+          ctx.lineWidth = 2 * window.devicePixelRatio;
+          ctx.beginPath();
+          ctx.moveTo(x, sightY);
+          ctx.lineTo(x, terrainY);
+          ctx.stroke();
+          ctx.fillStyle = colors.danger;
+          ctx.beginPath();
+          ctx.arc(x, terrainY, 6 * window.devicePixelRatio, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = colors.danger;
+          ctx.font = `${12 * window.devicePixelRatio}px Microsoft YaHei, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText("阻挡点", x, terrainY - 12 * window.devicePixelRatio);
+        }
+        ctx.restore();
+      }
+
       function updateProfileLine() {
         if (!profileLineGroup || !window.THREE) return;
         clearGroup(profileLineGroup);
@@ -1402,8 +1485,41 @@
         geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
         profileLineGroup.add(new THREE.Line(
           geometry,
-          new THREE.LineBasicMaterial({ color: 0x51cf66, linewidth: 2 }),
+          new THREE.LineBasicMaterial({ color: 0x74c0fc, linewidth: 2 }),
         ));
+        updateSightLine();
+      }
+
+      function updateSightLine() {
+        if (!profileLineGroup || !window.THREE) return;
+        const sight = currentSightResult();
+        if (!sight) return;
+
+        const first = sight.samples[0];
+        const last = sight.samples[sight.samples.length - 1];
+        const colorValue = sight.visible ? 0x51cf66 : 0xff6b6b;
+        const sightGeometry = new THREE.BufferGeometry();
+        sightGeometry.setAttribute("position", new THREE.Float32BufferAttribute([
+          first.x * 5, heightToY(first.sightHeight) + 0.46, first.z * 5,
+          last.x * 5, heightToY(last.sightHeight) + 0.46, last.z * 5,
+        ], 3));
+        profileLineGroup.add(new THREE.Line(
+          sightGeometry,
+          new THREE.LineBasicMaterial({ color: colorValue, linewidth: 3 }),
+        ));
+
+        if (sight.obstruction) {
+          const block = new THREE.Mesh(
+            new THREE.SphereGeometry(0.18, 18, 12),
+            new THREE.MeshBasicMaterial({ color: 0xff4d4f }),
+          );
+          block.position.set(
+            sight.obstruction.x * 5,
+            heightToY(sight.obstruction.height) + 0.42,
+            sight.obstruction.z * 5,
+          );
+          profileLineGroup.add(block);
+        }
       }
 
       function addProfileMarker(point, colorValue) {
@@ -1662,7 +1778,7 @@
           return;
         }
         if (state.profileStart && state.profileEnd) {
-          byId("teacherNote").innerHTML = "<strong>剖面五步法：</strong>定线、建坐标、定比例尺、描点、连线。右侧曲线来自同一个 h(x,z)，可用来解释等高线疏密与坡度变化。";
+          byId("teacherNote").innerHTML = "<strong>通视判断：</strong>先看整体阻挡，再看凹坡/凸坡。右侧剖面把地形曲线和 A-B 视线放在同一坐标内，红色阻挡点表示中间地形高于视线。";
           return;
         }
         byId("teacherNote").innerHTML = `<strong>${mode.label}：</strong>${meta.proverb}。${mode.note}`;
@@ -1680,8 +1796,11 @@
           return;
         }
         if (state.profileStart && state.profileEnd) {
-          byId("sliceHeight").textContent = "A-B 剖面线";
-          byId("sliceHint").textContent = "剖面五步法：定线、建坐标、定比例尺、描点、连线。2D 卷面线、中间 3D 线和右侧剖面曲线都来自 profileSamples。";
+          const sight = currentSightResult();
+          byId("sliceHeight").textContent = sight && sight.visible ? "通视判断：可通视" : "通视判断：不可通视";
+          byId("sliceHint").textContent = sight && sight.visible
+            ? "绿色 A-B 视线表示中间地形没有高出视线，可用剖面图验证。"
+            : "红色 A-B 视线表示中间地形发生遮挡，阻挡点已在 2D、3D 和剖面图中同步标出。";
           return;
         }
         if (state.profileStart) {
@@ -1720,7 +1839,13 @@
           byId("profileReadout").textContent = `剖面模式：A 点已设置，海拔约 ${Math.round(state.profileStart.height)}m；请在卷面图上点击 B 点。`;
           return;
         }
-        byId("profileReadout").textContent = `A-B 剖面图：A≈${Math.round(state.profileStart.height)}m，B≈${Math.round(state.profileEnd.height)}m。已按“定线、建坐标、定比例尺、描点、连线”生成高度曲线。`;
+        const sight = currentSightResult();
+        if (sight && sight.visible) {
+          byId("profileReadout").textContent = `A-B 通视判断：可通视。A≈${Math.round(state.profileStart.height)}m，B≈${Math.round(state.profileEnd.height)}m，中间地形均低于视线。`;
+          return;
+        }
+        const block = sight && sight.obstruction;
+        byId("profileReadout").textContent = `A-B 通视判断：不可通视，阻挡点约 ${Math.round(block.height)}m，高出视线约 ${Math.round(block.height - block.sightHeight)}m。A≈${Math.round(state.profileStart.height)}m，B≈${Math.round(state.profileEnd.height)}m。`;
       }
 
       function renderSlogans() {

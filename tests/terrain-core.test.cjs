@@ -83,6 +83,26 @@ test("profileSamples returns ordered A-B terrain heights", () => {
   assert.ok(samples.some((sample) => sample.height > samples[0].height));
 });
 
+test("lineOfSight reports visible A-B points when the profile dips below the sight line", () => {
+  const result = core.lineOfSight("basin", { x: -0.8, z: 0 }, { x: 0.8, z: 0 }, 41);
+
+  assert.equal(result.visible, true);
+  assert.equal(result.obstruction, null);
+  assert.equal(result.samples.length, 41);
+  assert.ok(result.clearanceMin > 0);
+  assert.ok(result.samples.every((sample) => sample.sightHeight >= sample.height || sample.t === 0 || sample.t === 1));
+});
+
+test("lineOfSight marks the first terrain obstruction on a blocked A-B profile", () => {
+  const result = core.lineOfSight("peak", { x: -0.9, z: 0 }, { x: 0.9, z: 0 }, 81);
+
+  assert.equal(result.visible, false);
+  assert.ok(result.obstruction);
+  assert.ok(result.obstruction.t > 0 && result.obstruction.t < 1);
+  assert.ok(result.obstruction.height > result.obstruction.sightHeight);
+  assert.equal(result.obstruction, result.samples.find((sample) => sample.blocked));
+});
+
 test("terrain metadata binds each landform to its planned reference card", () => {
   for (const item of core.TERRAIN_TYPES) {
     assert.match(item.card, /^[ABC][1-6]_/);

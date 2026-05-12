@@ -90,3 +90,13 @@ test("contour.html wires profile clicks through shared terrain samples", () => {
   assert.match(html, /profileSamples/);
   assert.match(html, /定线、建坐标、定比例尺、描点、连线/);
 });
+
+test("contour.html exposes stage 6B line-of-sight feedback on the A-B profile", () => {
+  const html = fs.readFileSync(htmlPath, "utf8");
+  assert.match(html, /lineOfSight/);
+  assert.match(html, /drawSightLineOnProfile/);
+  assert.match(html, /drawSightSelection/);
+  assert.match(html, /updateSightLine/);
+  assert.match(html, /阻挡点/);
+  assert.match(html, /通视判断/);
+});
