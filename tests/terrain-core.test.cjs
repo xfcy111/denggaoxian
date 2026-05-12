@@ -74,6 +74,15 @@ test("contourSegments returns drawable marching-squares line segments", () => {
   }
 });
 
+test("profileSamples returns ordered A-B terrain heights", () => {
+  const samples = core.profileSamples("ridge", { x: -0.8, z: -0.2 }, { x: 0.8, z: 0.2 }, 25);
+  assert.equal(samples.length, 25);
+  assert.equal(samples[0].t, 0);
+  assert.equal(samples.at(-1).t, 1);
+  assert.ok(samples.every((sample) => Number.isFinite(sample.height)));
+  assert.ok(samples.some((sample) => sample.height > samples[0].height));
+});
+
 test("terrain metadata binds each landform to its planned reference card", () => {
   for (const item of core.TERRAIN_TYPES) {
     assert.match(item.card, /^[ABC][1-6]_/);

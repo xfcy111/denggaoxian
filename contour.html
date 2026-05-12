@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>等高线地形图 3D 互动教学</title>
+  <link rel="icon" href="data:,">
   <style>
     :root {
       color-scheme: light;
@@ -107,6 +108,7 @@
 
     .mode-switcher,
     .terrain-switcher,
+    .map-tool-switcher,
     .view-switcher,
     .utility-actions {
       display: flex;
@@ -117,6 +119,7 @@
 
     .mode-button,
     .terrain-button,
+    .tool-button,
     .view-button,
     .utility-button {
       border: 1px solid var(--line);
@@ -132,6 +135,7 @@
 
     .mode-button:hover,
     .terrain-button:hover,
+    .tool-button:hover,
     .view-button:hover,
     .utility-button:hover {
       transform: translateY(-1px);
@@ -140,6 +144,7 @@
 
     .mode-button.is-active,
     .terrain-button.is-active,
+    .tool-button.is-active,
     .view-button.is-active {
       background: var(--accent);
       border-color: var(--accent);
@@ -228,6 +233,11 @@
 
     .canvas-frame {
       min-height: 300px;
+    }
+
+    .profile-frame {
+      min-height: 150px;
+      aspect-ratio: 3 / 1;
     }
 
     .stage {
@@ -549,7 +559,15 @@
           <div class="canvas-frame">
             <canvas id="contourCanvas" width="900" height="720" aria-label="2D 等高线卷面图"></canvas>
           </div>
+          <div class="map-tool-switcher" aria-label="卷面图工具">
+            <button class="tool-button is-active" type="button" data-map-tool="point">点选联动</button>
+            <button class="tool-button" type="button" data-map-tool="profile">剖面模式</button>
+          </div>
           <div class="point-readout" id="pointReadout">点击 2D 等高线图任意位置；已点选后会在 2D 与 3D 中同步标出同一点及海拔。</div>
+          <div class="canvas-frame profile-frame">
+            <canvas id="profileCanvas" width="900" height="300" aria-label="A-B 剖面图"></canvas>
+          </div>
+          <div class="point-readout profile-readout" id="profileReadout">A-B 剖面图：切到剖面模式后，第一次点击设 A 点，第二次点击设 B 点。剖面五步法：定线、建坐标、定比例尺、描点、连线。</div>
           <ul class="legend-list">
             <li><span class="dot"></span><span id="legendPrimary">同一高度点连成线，数值向山顶递增。</span></li>
             <li><span class="dot orange"></span><span>计曲线加粗，投屏时优先读粗线数字。</span></li>
@@ -581,11 +599,13 @@
       const core = window.ContourTerrain;
       const terrainCanvas = document.getElementById("terrainCanvas");
       const contourCanvas = document.getElementById("contourCanvas");
+      const profileCanvas = document.getElementById("profileCanvas");
       const referenceCanvas = document.getElementById("referenceCanvas");
       const terrainSwitcher = document.querySelector(".terrain-switcher");
       const modeButtons = Array.from(document.querySelectorAll("[data-mode]"));
       let terrainButtons = Array.from(document.querySelectorAll("[data-terrain]"));
       const viewButtons = Array.from(document.querySelectorAll("[data-view]"));
+      const mapToolButtons = Array.from(document.querySelectorAll("[data-map-tool]"));
       const MODE_META = {
         landform: {
           label: "部位判读",
@@ -629,8 +649,11 @@
         verticalScale: 1,
         interval: 100,
         view: "orbit",
+        mapTool: "point",
         activeSlogan: null,
         selectedPoint: null,
+        profileStart: null,
+        profileEnd: null,
         sliceLevels: [],
         sliceTimer: null,
         sliceIndex: -1,
@@ -648,6 +671,7 @@
       let contourGroup;
       let historyGroup;
       let selectionGroup;
+      let profileLineGroup;
       let slicePlane;
       let dragState = null;
       const gridSize = 121;
@@ -741,7 +765,8 @@
         contourGroup = new THREE.Group();
         historyGroup = new THREE.Group();
         selectionGroup = new THREE.Group();
-        scene.add(contourGroup, historyGroup, selectionGroup);
+        profileLineGroup = new THREE.Group();
+        scene.add(contourGroup, historyGroup, selectionGroup, profileLineGroup);
 
         const planeGeometry = new THREE.PlaneGeometry(11, 11, 1, 1);
         const planeMaterial = new THREE.MeshBasicMaterial({
@@ -838,6 +863,12 @@
         if (state.selectedPoint) {
           state.selectedPoint.height = core.heightAt(state.terrain, state.selectedPoint.x, state.selectedPoint.z, params());
         }
+        if (state.profileStart) {
+          state.profileStart.height = core.heightAt(state.terrain, state.profileStart.x, state.profileStart.z, params());
+        }
+        if (state.profileEnd) {
+          state.profileEnd.height = core.heightAt(state.terrain, state.profileEnd.x, state.profileEnd.z, params());
+        }
         const grid = core.sampleGrid(state.terrain, gridSize, params());
         if (terrainMesh) {
           terrainMesh.geometry.dispose();
@@ -868,7 +899,9 @@
         slicePlane.visible = false;
         updateCameraForView();
         updateSelectionMarker();
+        updateProfileLine();
         drawContourCanvas();
+        drawProfileCanvas();
         drawReferenceCard();
         updateCopy();
       }
@@ -965,6 +998,7 @@
         }
 
         drawSpecialMarks(ctx, plotW, plotH, colors);
+        drawProfileSelection(ctx, plotW, plotH, colors);
         drawSelectedPoint(ctx, plotW, plotH, colors);
         ctx.restore();
       }
@@ -1221,6 +1255,166 @@
         ctx.restore();
       }
 
+      function drawProfileSelection(ctx, width, height, colors) {
+        if (!state.profileStart) return;
+        const start = toCanvas(state.profileStart.x, state.profileStart.z, width, height);
+        const end = state.profileEnd ? toCanvas(state.profileEnd.x, state.profileEnd.z, width, height) : null;
+        const radius = 7 * window.devicePixelRatio;
+
+        ctx.save();
+        ctx.lineWidth = 2.5 * window.devicePixelRatio;
+        ctx.strokeStyle = colors.green;
+        ctx.fillStyle = colors.green;
+        if (end) {
+          ctx.setLineDash([9 * window.devicePixelRatio, 6 * window.devicePixelRatio]);
+          ctx.beginPath();
+          ctx.moveTo(start.x, start.y);
+          ctx.lineTo(end.x, end.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        drawProfilePointLabel(ctx, start, "A", radius, colors.green, colors);
+        if (end) drawProfilePointLabel(ctx, end, "B", radius, colors.danger, colors);
+        ctx.restore();
+      }
+
+      function drawProfilePointLabel(ctx, point, text, radius, color, colors) {
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(point.x - radius * 1.8, point.y);
+        ctx.lineTo(point.x + radius * 1.8, point.y);
+        ctx.moveTo(point.x, point.y - radius * 1.8);
+        ctx.lineTo(point.x, point.y + radius * 1.8);
+        ctx.stroke();
+        label(ctx, text, point.x + 26 * window.devicePixelRatio, point.y - 18 * window.devicePixelRatio, colors);
+      }
+
+      function drawProfileCanvas() {
+        if (!profileCanvas) return;
+        resizeCanvasToDisplaySize(profileCanvas);
+        const ctx = profileCanvas.getContext("2d");
+        const colors = getThemeColors();
+        const w = profileCanvas.width;
+        const h = profileCanvas.height;
+        const padX = w * 0.08;
+        const padTop = h * 0.16;
+        const padBottom = h * 0.2;
+        const plotW = w - padX * 2;
+        const plotH = h - padTop - padBottom;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = colors.paper;
+        ctx.fillRect(0, 0, w, h);
+        drawPaperGrid(ctx, w, h, colors);
+
+        ctx.save();
+        ctx.strokeStyle = colorWithAlpha(colors.contourStrong, 0.62);
+        ctx.lineWidth = 2 * window.devicePixelRatio;
+        ctx.strokeRect(padX, padTop, plotW, plotH);
+        ctx.fillStyle = colors.ink;
+        ctx.font = `${15 * window.devicePixelRatio}px Microsoft YaHei, sans-serif`;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText("A-B 剖面图", padX, padTop * 0.55);
+
+        if (!state.profileStart || !state.profileEnd) {
+          ctx.fillStyle = colors.muted;
+          ctx.font = `${13 * window.devicePixelRatio}px Microsoft YaHei, sans-serif`;
+          ctx.fillText("剖面模式：第一次点击设 A 点，第二次点击设 B 点。", padX + 12 * window.devicePixelRatio, padTop + plotH / 2);
+          ctx.restore();
+          updateProfileReadout();
+          return;
+        }
+
+        const samples = core.profileSamples(state.terrain, state.profileStart, state.profileEnd, 90, params());
+        const heights = samples.map((sample) => sample.height);
+        const minHeight = Math.min(...heights);
+        const maxHeight = Math.max(...heights);
+        const range = Math.max(40, maxHeight - minHeight);
+        const low = minHeight - range * 0.12;
+        const high = maxHeight + range * 0.12;
+        const span = Math.max(1, high - low);
+        const toX = (sample) => padX + sample.t * plotW;
+        const toY = (sample) => padTop + plotH - ((sample.height - low) / span) * plotH;
+
+        ctx.strokeStyle = colorWithAlpha(colors.contour, 0.18);
+        ctx.lineWidth = 1 * window.devicePixelRatio;
+        for (let i = 1; i < 4; i += 1) {
+          const y = padTop + (plotH * i) / 4;
+          ctx.beginPath();
+          ctx.moveTo(padX, y);
+          ctx.lineTo(padX + plotW, y);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = colors.green;
+        ctx.lineWidth = 3 * window.devicePixelRatio;
+        ctx.beginPath();
+        samples.forEach((sample, index) => {
+          const x = toX(sample);
+          const y = toY(sample);
+          if (index === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        ctx.fillStyle = colors.green;
+        ctx.beginPath();
+        ctx.arc(toX(samples[0]), toY(samples[0]), 5 * window.devicePixelRatio, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = colors.danger;
+        ctx.beginPath();
+        ctx.arc(toX(samples[samples.length - 1]), toY(samples[samples.length - 1]), 5 * window.devicePixelRatio, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = colors.ink;
+        ctx.font = `${12 * window.devicePixelRatio}px Microsoft YaHei, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText("A", toX(samples[0]), h - padBottom * 0.42);
+        ctx.fillText("B", toX(samples[samples.length - 1]), h - padBottom * 0.42);
+        ctx.textAlign = "right";
+        ctx.fillText(`${Math.round(high)}m`, padX - 8 * window.devicePixelRatio, padTop);
+        ctx.fillText(`${Math.round(low)}m`, padX - 8 * window.devicePixelRatio, padTop + plotH);
+        ctx.restore();
+        updateProfileReadout();
+      }
+
+      function updateProfileLine() {
+        if (!profileLineGroup || !window.THREE) return;
+        clearGroup(profileLineGroup);
+        if (!state.profileStart) return;
+
+        addProfileMarker(state.profileStart, 0x2f9e44);
+        if (!state.profileEnd) return;
+        addProfileMarker(state.profileEnd, 0xd9480f);
+
+        const samples = core.profileSamples(state.terrain, state.profileStart, state.profileEnd, 100, params());
+        const positions = [];
+        for (const sample of samples) {
+          positions.push(sample.x * 5, heightToY(sample.height) + 0.18, sample.z * 5);
+        }
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+        profileLineGroup.add(new THREE.Line(
+          geometry,
+          new THREE.LineBasicMaterial({ color: 0x51cf66, linewidth: 2 }),
+        ));
+      }
+
+      function addProfileMarker(point, colorValue) {
+        const sphere = new THREE.Mesh(
+          new THREE.SphereGeometry(0.14, 18, 12),
+          new THREE.MeshBasicMaterial({ color: colorValue }),
+        );
+        sphere.position.set(point.x * 5, heightToY(point.height) + 0.24, point.z * 5);
+        profileLineGroup.add(sphere);
+      }
+
       function updateSelectionMarker() {
         if (!selectionGroup || !window.THREE) return;
         clearGroup(selectionGroup);
@@ -1410,7 +1604,10 @@
       function resetClassroomFocus() {
         state.activeSlogan = null;
         state.selectedPoint = null;
+        state.profileStart = null;
+        state.profileEnd = null;
         updateSelectionMarker();
+        updateProfileLine();
       }
 
       function resetView() {
@@ -1433,6 +1630,7 @@
         ctx.textAlign = "center";
         ctx.fillText("Three.js 未加载，右侧卷面图仍可用于讲解。", terrainCanvas.width / 2, terrainCanvas.height / 2);
         drawContourCanvas();
+        drawProfileCanvas();
         drawReferenceCard();
         updateCopy();
       }
@@ -1451,6 +1649,7 @@
         renderSlogans();
         updateTeacherNote();
         updatePointReadout();
+        updateProfileReadout();
         updateViewCopy();
       }
 
@@ -1460,6 +1659,10 @@
         const slogan = state.activeSlogan ? SLOGAN_META[state.activeSlogan] : null;
         if (slogan) {
           byId("teacherNote").innerHTML = `<strong>口诀验证：</strong>${slogan.message}`;
+          return;
+        }
+        if (state.profileStart && state.profileEnd) {
+          byId("teacherNote").innerHTML = "<strong>剖面五步法：</strong>定线、建坐标、定比例尺、描点、连线。右侧曲线来自同一个 h(x,z)，可用来解释等高线疏密与坡度变化。";
           return;
         }
         byId("teacherNote").innerHTML = `<strong>${mode.label}：</strong>${meta.proverb}。${mode.note}`;
@@ -1476,6 +1679,16 @@
           byId("sliceHint").textContent = SLOGAN_META[state.activeSlogan].hint;
           return;
         }
+        if (state.profileStart && state.profileEnd) {
+          byId("sliceHeight").textContent = "A-B 剖面线";
+          byId("sliceHint").textContent = "剖面五步法：定线、建坐标、定比例尺、描点、连线。2D 卷面线、中间 3D 线和右侧剖面曲线都来自 profileSamples。";
+          return;
+        }
+        if (state.profileStart) {
+          byId("sliceHeight").textContent = "剖面模式：A 点已定";
+          byId("sliceHint").textContent = "继续在 2D 等高线图上点击 B 点，即可生成 A-B 剖面线与剖面曲线。";
+          return;
+        }
         if (state.view === "overhead") {
           byId("sliceHeight").textContent = "俯视对照";
           byId("sliceHint").textContent = "俯视图就是等高线图的空间来源：从正上方看，3D 高低起伏被压缩成平面等高线。";
@@ -1486,11 +1699,28 @@
       }
 
       function updatePointReadout() {
+        if (state.mapTool === "profile") {
+          byId("pointReadout").textContent = "剖面模式：第一次点击设 A 点，第二次点击设 B 点；A-B 线会同步显示在 2D 与 3D 中。";
+          return;
+        }
         if (!state.selectedPoint) {
           byId("pointReadout").textContent = "点击 2D 等高线图任意位置；已点选后会在 2D 与 3D 中同步标出同一点及海拔。";
           return;
         }
         byId("pointReadout").textContent = `已点选：x=${state.selectedPoint.x.toFixed(2)}，z=${state.selectedPoint.z.toFixed(2)}，海拔约 ${Math.round(state.selectedPoint.height)}m。`;
+      }
+
+      function updateProfileReadout() {
+        if (!profileCanvas) return;
+        if (!state.profileStart) {
+          byId("profileReadout").textContent = "A-B 剖面图：切到剖面模式后，第一次点击设 A 点，第二次点击设 B 点。剖面五步法：定线、建坐标、定比例尺、描点、连线。";
+          return;
+        }
+        if (!state.profileEnd) {
+          byId("profileReadout").textContent = `剖面模式：A 点已设置，海拔约 ${Math.round(state.profileStart.height)}m；请在卷面图上点击 B 点。`;
+          return;
+        }
+        byId("profileReadout").textContent = `A-B 剖面图：A≈${Math.round(state.profileStart.height)}m，B≈${Math.round(state.profileEnd.height)}m。已按“定线、建坐标、定比例尺、描点、连线”生成高度曲线。`;
       }
 
       function renderSlogans() {
@@ -1502,25 +1732,57 @@
       }
 
       function handleContourClick(event) {
+        if (state.mapTool === "profile") {
+          handleProfileClick(event);
+          return;
+        }
+        const point = contourPointFromEvent(event);
+        if (!point) return;
+        state.selectedPoint = point;
+        updateSelectionMarker();
+        drawContourCanvas();
+        updatePointReadout();
+        updateViewCopy();
+      }
+
+      function handleProfileClick(event) {
+        const point = contourPointFromEvent(event);
+        if (!point) return;
+
+        if (!state.profileStart || state.profileEnd) {
+          state.profileStart = point;
+          state.profileEnd = null;
+        } else {
+          state.profileEnd = point;
+        }
+        state.selectedPoint = null;
+        state.activeSlogan = null;
+        renderSlogans();
+        updateSelectionMarker();
+        updateProfileLine();
+        drawContourCanvas();
+        drawProfileCanvas();
+        updatePointReadout();
+        updateTeacherNote();
+        updateViewCopy();
+      }
+
+      function contourPointFromEvent(event) {
         const rect = contourCanvas.getBoundingClientRect();
         const localX = (event.clientX - rect.left) * (contourCanvas.width / Math.max(1, rect.width));
         const localY = (event.clientY - rect.top) * (contourCanvas.height / Math.max(1, rect.height));
         const pad = Math.min(contourCanvas.width, contourCanvas.height) * 0.08;
         const plotW = contourCanvas.width - pad * 2;
         const plotH = contourCanvas.height - pad * 2;
-        if (localX < pad || localX > pad + plotW || localY < pad || localY > pad + plotH) return;
+        if (localX < pad || localX > pad + plotW || localY < pad || localY > pad + plotH) return null;
 
         const x = ((localX - pad) / plotW) * 2 - 1;
         const z = ((localY - pad) / plotH) * 2 - 1;
-        state.selectedPoint = {
+        return {
           x,
           z,
           height: core.heightAt(state.terrain, x, z, params()),
         };
-        updateSelectionMarker();
-        drawContourCanvas();
-        updatePointReadout();
-        updateViewCopy();
       }
 
       function bindEvents() {
@@ -1551,6 +1813,22 @@
             state.view = button.dataset.view;
             viewButtons.forEach((item) => item.classList.toggle("is-active", item === button));
             updateCameraForView();
+            updateViewCopy();
+          });
+        });
+
+        mapToolButtons.forEach((button) => {
+          button.addEventListener("click", function () {
+            state.mapTool = button.dataset.mapTool;
+            mapToolButtons.forEach((item) => item.classList.toggle("is-active", item === button));
+            state.selectedPoint = null;
+            state.activeSlogan = null;
+            renderSlogans();
+            updateSelectionMarker();
+            drawContourCanvas();
+            drawProfileCanvas();
+            updatePointReadout();
+            updateTeacherNote();
             updateViewCopy();
           });
         });
@@ -1590,6 +1868,7 @@
 
         window.addEventListener("resize", function () {
           drawContourCanvas();
+          drawProfileCanvas();
           drawReferenceCard();
         });
       }

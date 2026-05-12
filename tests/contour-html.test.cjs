@@ -70,3 +70,23 @@ test("contour.html explains overhead view as the source of contour lines", () =>
   assert.match(html, /俯视图就是等高线图的空间来源/);
   assert.match(html, /updateViewCopy/);
 });
+
+test("contour.html exposes the stage 6A profile mode surface", () => {
+  const html = fs.readFileSync(htmlPath, "utf8");
+  assert.match(html, /data-map-tool="point"/);
+  assert.match(html, /data-map-tool="profile"/);
+  assert.match(html, /id="profileCanvas"/);
+  assert.match(html, /id="profileReadout"/);
+  assert.match(html, /剖面模式/);
+  assert.match(html, /A-B 剖面图/);
+});
+
+test("contour.html wires profile clicks through shared terrain samples", () => {
+  const html = fs.readFileSync(htmlPath, "utf8");
+  assert.match(html, /handleProfileClick/);
+  assert.match(html, /drawProfileCanvas/);
+  assert.match(html, /drawProfileSelection/);
+  assert.match(html, /updateProfileLine/);
+  assert.match(html, /profileSamples/);
+  assert.match(html, /定线、建坐标、定比例尺、描点、连线/);
+});
