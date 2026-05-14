@@ -74,6 +74,69 @@ C1_reservoir_site_raw.png <- C:\Users\xl\.codex\generated_images\019e15a9-2bfb-7
 - 构图比例正确：主图约 65%-70%，真实地貌参考约 25%-30%。
 - 高考可迁移：对应明确考点，不只追求“好看”。
 
+## C2-C5 后期手动生成计划
+
+> 当前阶段不生成新图。C2-C5 先使用网页内的解析函数临时卡，后期用 GPT-image-2 手动生成后放入 `images/gpt-raw/`，压缩为 `images/processed/*.webp`。
+
+### 统一风格关键词
+
+```text
+高中地理等高线教学参考卡、真实地貌案例感、米色教材纸张、棕色等高线、清晰海拔数字、右侧小型斜视地貌插图、中文标签简洁清楚、主图占 65%-70%、插图占 25%-30%、无水印、无随机地名、适合课堂投屏
+```
+
+### C2_road_route
+
+- Raw file: `images/gpt-raw/C2_road_route_raw.png`
+- Processed file: `images/processed/C2_road_route.webp`
+- QC status: PLANNED
+- Prompt keywords:
+
+```text
+等高线地形图、公路线沿等高线绕行、避开陡坡和深切河谷、缓坡路线用橙色线标出、危险陡坡用淡红遮罩、标注“沿等高线”“避开陡坡”“跨谷需桥涵”
+```
+
+### C3_campsite_site
+
+- Raw file: `images/gpt-raw/C3_campsite_site_raw.png`
+- Processed file: `images/processed/C3_campsite_site.webp`
+- QC status: PLANNED
+- Prompt keywords:
+
+```text
+山谷河流、缓坡高地、宿营地选在高地缓坡、避开河谷洪水线和陡崖、蓝色河流、绿色安全营地区、红色危险区、标注“高地缓坡”“远离河谷”“避开陡崖”
+```
+
+### C4_agriculture_layout
+
+- Raw file: `images/gpt-raw/C4_agriculture_layout_raw.png`
+- Processed file: `images/processed/C4_agriculture_layout.webp`
+- QC status: PLANNED
+- Prompt keywords:
+
+```text
+低缓平地种植区、丘陵林牧区、低洼水产区、等高线稀疏处适合耕作、坡地适合林牧、水域低洼适合水产、三块半透明分区色块、标注“种植区”“林牧区”“水产区”
+```
+
+### C5_water_diversion
+
+- Raw file: `images/gpt-raw/C5_water_diversion_raw.png`
+- Processed file: `images/processed/C5_water_diversion.webp`
+- QC status: PLANNED
+- Prompt keywords:
+
+```text
+引水线路、起点为高处稳定水源或水库边缘、终点为低处农田或居民点、蓝色引水线沿等高线缓慢下降、红色不可行陡坡段、绿色受水区、箭头表示水流方向、标注“水源点”“引水线路”“受水区”“避开陡坡”
+```
+
+## 静态水流与后续流域识别方案
+
+- 当前网页保留静态水流箭头，不做粒子动画。
+- 山谷：箭头沿谷线向低处汇流，说明“凸高为谷，谷中常有水流”。
+- 山脊：两侧短箭头背离山脊线，说明分水岭。
+- 盆地/大盆地：四周箭头向中心低地汇集，说明向心水系。
+- 水库坝址：箭头沿河谷穿过窄口，坝线横跨窄口，上游形成库区。
+- 后续算法：基于 `heightAt()` 建静态采样网格，每个格点取 8 邻域最低点作为流向；无更低点时标记汇水终点；相邻格点流向不同终点的边界近似为分水线；从出口点反向追踪流入格点得到集水范围；先只做 Canvas 2D 覆盖。
+
 ## A1_peak
 
 - Date:

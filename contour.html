@@ -73,15 +73,16 @@
     .app {
       display: grid;
       grid-template-rows: auto minmax(0, 1fr) auto;
-      min-height: 100%;
+      height: 100vh;
+      min-height: 0;
     }
 
     .topbar {
       display: grid;
-      grid-template-columns: minmax(230px, 1fr) auto auto auto;
+      grid-template-columns: minmax(210px, 0.82fr) auto minmax(360px, 1.15fr) auto;
       align-items: center;
-      gap: 16px;
-      padding: 14px 18px;
+      gap: 10px;
+      padding: 8px 14px;
       border-bottom: 1px solid var(--line);
       background: var(--toolbar);
       backdrop-filter: blur(14px);
@@ -94,15 +95,15 @@
 
     .brand h1 {
       margin: 0;
-      font-size: 20px;
+      font-size: 18px;
       line-height: 1.2;
       font-weight: 800;
     }
 
     .brand p {
-      margin: 5px 0 0;
+      margin: 3px 0 0;
       color: var(--muted);
-      font-size: 13px;
+      font-size: 11px;
       line-height: 1.35;
     }
 
@@ -115,7 +116,7 @@
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 7px;
+      gap: 6px;
     }
 
     .mode-button,
@@ -128,11 +129,12 @@
       border-radius: 999px;
       background: color-mix(in srgb, var(--paper) 92%, transparent);
       color: var(--ink);
-      padding: 8px 12px;
-      min-height: 36px;
+      padding: 6px 10px;
+      min-height: 31px;
       cursor: pointer;
       transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
       white-space: nowrap;
+      font-size: 14px;
     }
 
     .mode-button:hover,
@@ -162,10 +164,13 @@
 
     .workspace {
       display: grid;
-      grid-template-columns: minmax(250px, 0.72fr) minmax(430px, 1.35fr) minmax(320px, 0.93fr);
-      gap: 14px;
+      grid-template-columns: minmax(230px, 0.62fr) minmax(500px, 1.72fr) minmax(300px, 0.82fr);
+      grid-template-rows: minmax(0, 1fr);
+      gap: 10px;
       min-height: 0;
-      padding: 14px;
+      height: 100%;
+      padding: 10px 14px;
+      position: relative;
     }
 
     .panel,
@@ -179,6 +184,32 @@
       overflow: hidden;
     }
 
+    .reference-panel {
+      grid-column: 1;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .contour-panel {
+      grid-column: 3;
+    }
+
+    .workspace.is-reference-collapsed .reference-panel,
+    .workspace.is-contour-collapsed .contour-panel {
+      display: none;
+    }
+
+    .workspace.is-reference-collapsed .stage {
+      grid-column: 1 / 3;
+    }
+
+    .workspace.is-contour-collapsed .stage {
+      grid-column: 2 / 4;
+    }
+
+    .workspace.is-reference-collapsed.is-contour-collapsed .stage {
+      grid-column: 1 / -1;
+    }
+
     .panel {
       display: grid;
       grid-template-rows: auto minmax(0, 1fr) auto;
@@ -189,7 +220,7 @@
       align-items: baseline;
       justify-content: space-between;
       gap: 10px;
-      padding: 14px 15px 11px;
+      padding: 11px 13px 9px;
       border-bottom: 1px solid var(--line);
     }
 
@@ -205,12 +236,69 @@
       white-space: nowrap;
     }
 
+    .panel-header-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-toggle,
+    .side-restore,
+    .lightbox-close {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--paper) 92%, transparent);
+      color: var(--ink);
+      cursor: pointer;
+      transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .panel-toggle {
+      min-height: 26px;
+      padding: 3px 9px;
+      font-size: 12px;
+    }
+
+    .panel-toggle:hover,
+    .side-restore:hover,
+    .lightbox-close:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
     .reference-body,
     .contour-body {
       min-height: 0;
       padding: 12px;
       display: grid;
       gap: 10px;
+    }
+
+    .reference-body {
+      overflow: auto;
+    }
+
+    .contour-body {
+      grid-template-rows: auto auto auto auto auto auto;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-color: var(--accent) color-mix(in srgb, var(--line) 28%, transparent);
+      scrollbar-width: thin;
+    }
+
+    .contour-body::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .contour-body::-webkit-scrollbar-track {
+      background: color-mix(in srgb, var(--line) 20%, transparent);
+      border-radius: 999px;
+    }
+
+    .contour-body::-webkit-scrollbar-thumb {
+      background: var(--accent);
+      border: 2px solid color-mix(in srgb, var(--paper) 90%, transparent);
+      border-radius: 999px;
     }
 
     .reference-frame,
@@ -238,14 +326,15 @@
 
     .reference-frame {
       aspect-ratio: 1 / 1;
+      cursor: zoom-in;
     }
 
     .canvas-frame {
-      min-height: 300px;
+      min-height: 260px;
     }
 
     .profile-frame {
-      min-height: 150px;
+      min-height: 155px;
       aspect-ratio: 3 / 1;
     }
 
@@ -254,14 +343,39 @@
       display: grid;
       grid-template-rows: minmax(0, 1fr);
       background: #0f1715;
+      grid-column: 2;
+    }
+
+    #realTerrainMap {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 220ms ease;
+      z-index: 1;
     }
 
     #terrainCanvas {
       width: 100%;
       height: 100%;
-      min-height: 520px;
+      min-height: 0;
       display: block;
       background: #101816;
+      transition: opacity 220ms ease;
+    }
+
+    [data-visual-mode="natural"] #terrainCanvas {
+      background: #111a16;
+    }
+
+    .stage.is-online-terrain #realTerrainMap {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .stage.is-online-terrain #terrainCanvas {
+      opacity: 0;
+      pointer-events: none;
     }
 
     .stage-overlay {
@@ -273,6 +387,7 @@
       justify-content: space-between;
       gap: 12px;
       pointer-events: none;
+      z-index: 2;
     }
 
     .stage-readout,
@@ -299,6 +414,20 @@
       color: rgba(247, 241, 223, 0.75);
       font-size: 12px;
       line-height: 1.45;
+    }
+
+    .real-terrain-status {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      margin-top: 8px;
+      padding: 3px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(247, 241, 223, 0.84);
+      font-size: 11px;
+      line-height: 1.2;
     }
 
     .legend-list {
@@ -340,7 +469,7 @@
 
     .controls-strip {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 8px;
       padding: 12px;
       border-top: 1px solid var(--line);
@@ -361,6 +490,31 @@
     .control-field input {
       width: 100%;
       accent-color: var(--accent);
+    }
+
+    .ideal-toggle {
+      width: 100%;
+      min-height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--paper) 92%, transparent);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease;
+      white-space: nowrap;
+    }
+
+    .ideal-toggle:hover {
+      transform: translateY(-1px);
+      border-color: var(--accent);
+    }
+
+    .ideal-toggle[aria-pressed="true"] {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
     }
 
     .teacher-strip {
@@ -443,27 +597,143 @@
       line-height: 1.5;
     }
 
+    .side-restore {
+      position: absolute;
+      top: 50%;
+      z-index: 4;
+      display: none;
+      min-width: 34px;
+      min-height: 96px;
+      padding: 10px 6px;
+      writing-mode: vertical-rl;
+      letter-spacing: 0;
+      color: var(--paper);
+      background: var(--accent);
+      border-color: var(--accent);
+      box-shadow: var(--shadow);
+    }
+
+    #restoreReferencePanel {
+      left: 18px;
+      transform: translateY(-50%);
+    }
+
+    #restoreContourPanel {
+      right: 18px;
+      transform: translateY(-50%);
+    }
+
+    .workspace.is-reference-collapsed #restoreReferencePanel,
+    .workspace.is-contour-collapsed #restoreContourPanel {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .reference-lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 12px;
+      padding: 20px;
+      background: rgba(14, 18, 16, 0.76);
+      backdrop-filter: blur(10px);
+    }
+
+    .reference-lightbox[hidden] {
+      display: none;
+    }
+
+    .lightbox-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: #fffaf0;
+    }
+
+    .lightbox-title {
+      display: grid;
+      gap: 2px;
+    }
+
+    .lightbox-title strong {
+      font-size: 17px;
+    }
+
+    .lightbox-title span {
+      color: rgba(255, 250, 240, 0.72);
+      font-size: 12px;
+    }
+
+    .lightbox-close {
+      min-height: 34px;
+      padding: 6px 13px;
+      background: #fffaf0;
+    }
+
+    .lightbox-frame {
+      display: grid;
+      place-items: center;
+      min-height: 0;
+      border: 1px solid rgba(255, 250, 240, 0.22);
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--paper) 94%, transparent);
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+    }
+
+    #referenceLightboxImage,
+    #referenceLightboxCanvas {
+      max-width: min(92vw, 1180px);
+      max-height: calc(100vh - 110px);
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      display: block;
+    }
+
     @media (max-width: 1080px) {
       body {
         overflow: auto;
+        overflow-x: hidden;
       }
 
       .app {
         display: block;
+        height: auto;
         min-height: 100%;
       }
 
       .topbar {
         grid-template-columns: 1fr;
+        padding: 12px 18px;
       }
 
       .workspace {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
+        height: auto;
+        width: 100%;
+        overflow: hidden;
       }
 
       .mobile-tabs {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100vw;
+        max-width: 100vw;
+      }
+
+      .mobile-tab {
+        min-width: 0;
+        width: 100%;
+        justify-content: center;
+        padding-inline: 6px;
+        font-size: 13px;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .workspace > [data-mobile-panel]:not(.is-mobile-active) {
@@ -482,6 +752,16 @@
         min-height: 420px;
       }
 
+      .workspace.is-reference-collapsed .stage,
+      .workspace.is-contour-collapsed .stage,
+      .workspace.is-reference-collapsed.is-contour-collapsed .stage {
+        grid-column: auto;
+      }
+
+      .side-restore {
+        display: none !important;
+      }
+
       .teacher-strip,
       .controls-strip {
         grid-template-columns: 1fr;
@@ -490,7 +770,7 @@
       .stage-overlay {
         position: static;
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         padding: 10px;
         background: #101816;
       }
@@ -502,13 +782,25 @@
 
       .stage-readout,
       .slice-readout {
+        min-width: 0;
         max-width: none;
         min-height: 0;
+        overflow-wrap: anywhere;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .mobile-tabs {
+        grid-template-columns: 1fr;
+      }
+
+      .stage-overlay {
+        grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
-<body data-theme="exam">
+<body data-theme="exam" data-visual-mode="natural">
   <main class="app">
     <header class="topbar">
       <div class="brand">
@@ -534,7 +826,7 @@
       <div class="utility-actions">
         <button class="utility-button" type="button" id="sliceButton">切面溯源</button>
         <button class="utility-button" type="button" id="resetButton">复位视角</button>
-        <button class="utility-button" type="button" id="themeToggle">自然地理主题</button>
+        <button class="utility-button" type="button" id="themeToggle" aria-pressed="true">自然写实</button>
       </div>
     </header>
 
@@ -545,16 +837,19 @@
     </nav>
 
     <section class="workspace" aria-label="等高线互动讲解工作区">
-      <aside class="panel reference-panel" data-mobile-panel="reference">
+      <aside class="panel reference-panel" id="referencePanel" data-mobile-panel="reference">
         <div class="panel-header">
           <h2 id="cardTitle">A1 山峰参考卡</h2>
-          <span id="cardStatus">待接入 GPT 图</span>
+          <div class="panel-header-actions">
+            <span id="cardStatus">待接入 GPT 图</span>
+            <button class="panel-toggle" type="button" id="toggleReferencePanel" aria-controls="referencePanel" aria-expanded="true">隐藏</button>
+          </div>
         </div>
         <div class="reference-body">
           <div class="reference-frame">
             <canvas id="referenceCanvas" width="900" height="900" aria-label="教材参考卡预览"></canvas>
           </div>
-          <p class="missing-card" id="cardNote">images/processed/A1_peak.webp 不存在时，页面使用同一解析函数绘制临时教学卡。</p>
+          <p class="missing-card" id="cardNote">参考图不存在时，页面使用同一解析函数绘制临时教学卡。</p>
         </div>
         <div class="controls-strip">
           <div class="control-field">
@@ -569,15 +864,21 @@
             <label for="intervalRange">等高距</label>
             <input id="intervalRange" type="range" min="50" max="150" step="50" value="100">
           </div>
+          <div class="control-field">
+            <label for="idealToggle">理想状态</label>
+            <button class="ideal-toggle" type="button" id="idealToggle" aria-pressed="true">理想开启</button>
+          </div>
         </div>
       </aside>
 
       <section class="stage is-mobile-active" aria-label="Three.js 3D 地形" data-mobile-panel="terrain">
+        <div id="realTerrainMap" aria-label="MapLibre 在线真实地形"></div>
         <canvas id="terrainCanvas"></canvas>
         <div class="stage-overlay">
           <div class="stage-readout">
             <strong id="terrainName">山峰</strong>
             <span id="terrainRule">闭合等高线，中间高、四周低</span>
+            <small class="real-terrain-status" id="realTerrainStatus">教学同源模型</small>
           </div>
           <div class="slice-readout">
             <strong id="sliceHeight">切面：未开始</strong>
@@ -586,10 +887,13 @@
         </div>
       </section>
 
-      <aside class="panel contour-panel" data-mobile-panel="contour">
+      <aside class="panel contour-panel" id="contourPanel" data-mobile-panel="contour">
         <div class="panel-header">
           <h2>2D 等高线卷面图</h2>
-          <span id="contourStatus">等高距 100m</span>
+          <div class="panel-header-actions">
+            <span id="contourStatus">等高距 100m</span>
+            <button class="panel-toggle" type="button" id="toggleContourPanel" aria-controls="contourPanel" aria-expanded="true">隐藏</button>
+          </div>
         </div>
         <div class="contour-body">
           <div class="canvas-frame">
@@ -617,6 +921,8 @@
           </div>
         </div>
       </aside>
+      <button class="side-restore" type="button" id="restoreReferencePanel" aria-controls="referencePanel">参考卡</button>
+      <button class="side-restore" type="button" id="restoreContourPanel" aria-controls="contourPanel">卷面图</button>
     </section>
 
     <footer class="teacher-strip">
@@ -630,15 +936,34 @@
     </footer>
   </main>
 
-  <script src="terrain-core.js"></script>
+  <section class="reference-lightbox" id="referenceLightbox" role="dialog" aria-modal="true" aria-labelledby="referenceLightboxTitle" hidden>
+    <div class="lightbox-bar">
+      <div class="lightbox-title">
+        <strong id="referenceLightboxTitle">GPT 参考图</strong>
+        <span id="referenceLightboxStatus">当前参考卡大图</span>
+      </div>
+      <button class="lightbox-close" type="button" id="closeReferenceLightbox">关闭</button>
+    </div>
+    <div class="lightbox-frame">
+      <img id="referenceLightboxImage" alt="GPT 参考图大图" hidden>
+      <canvas id="referenceLightboxCanvas" width="1200" height="1200" aria-label="解析函数临时参考卡大图" hidden></canvas>
+    </div>
+  </section>
+
+  <script>
+    window.DENGGAOXIAN_EMBEDDED_ASSETS = window.DENGGAOXIAN_EMBEDDED_ASSETS || {};
+  </script>
+  <script src="terrain-core.js?v=terrain-realism-sync"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
     (function () {
       const core = window.ContourTerrain;
       const terrainCanvas = document.getElementById("terrainCanvas");
+      const realTerrainMap = document.getElementById("realTerrainMap");
       const contourCanvas = document.getElementById("contourCanvas");
       const profileCanvas = document.getElementById("profileCanvas");
       const referenceCanvas = document.getElementById("referenceCanvas");
+      const terrainStage = document.querySelector(".stage");
       const terrainSwitcher = document.querySelector(".terrain-switcher");
       const modeButtons = Array.from(document.querySelectorAll("[data-mode]"));
       let terrainButtons = Array.from(document.querySelectorAll("[data-terrain]"));
@@ -646,7 +971,61 @@
       const mobilePanels = Array.from(document.querySelectorAll("[data-mobile-panel]"));
       const viewButtons = Array.from(document.querySelectorAll("[data-view]"));
       const mapToolButtons = Array.from(document.querySelectorAll("[data-map-tool]"));
-      const APPLICATION_CARD_ORDER = ["C1_reservoir_site", "C2_road_route", "C3_campsite_site", "C4_agriculture_layout"];
+      const workspace = document.querySelector(".workspace");
+      const referenceLightbox = document.getElementById("referenceLightbox");
+      const referenceLightboxImage = document.getElementById("referenceLightboxImage");
+      const referenceLightboxCanvas = document.getElementById("referenceLightboxCanvas");
+      const APPLICATION_CARD_ORDER = ["C1_reservoir_site", "C5_water_diversion", "C2_road_route", "C3_campsite_site", "C4_agriculture_layout"];
+      const embeddedReferenceAssets = window.DENGGAOXIAN_EMBEDDED_ASSETS || {};
+      const LOCAL_REFERENCE_BASE = ["images", "processed"].join("/") + "/";
+      const MAPLIBRE_JS_URL = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js";
+      const MAPLIBRE_CSS_URL = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css";
+      const MAPLIBRE_ASSET_TIMEOUT = 5000;
+      const ONLINE_TERRAIN_TIMEOUT = 8000;
+      const PUBLIC_CORS_ONLY = "PUBLIC_CORS_ONLY";
+      const REAL_TERRAIN_DEM_SOURCES = [
+        {
+          id: "mapterhorn",
+          label: "Mapterhorn DEM",
+          url: "https://tiles.mapterhorn.com/tilejson.json",
+          tileSize: 512,
+          encoding: "terrarium",
+        },
+        {
+          id: "maplibre-demo",
+          label: "MapLibre DEM",
+          url: "https://demotiles.maplibre.org/terrain-tiles/tiles.json",
+          tileSize: 256,
+        },
+      ];
+      const ONLINE_DATA_SOURCES = Object.freeze([
+        {
+          id: "public-dem-terrain",
+          label: "Public browser-safe DEM terrain",
+          access: PUBLIC_CORS_ONLY,
+          type: "terrain-dem",
+          urls: REAL_TERRAIN_DEM_SOURCES.map((source) => source.url),
+        },
+      ]);
+      window.DENGGAOXIAN_ONLINE_DATA_SOURCES = ONLINE_DATA_SOURCES;
+      const REAL_TERRAIN_VIEWPOINTS = {
+        peak: { center: [138.73, 35.36], zoom: 10.7, pitch: 68, bearing: -28, exaggeration: 1.45 },
+        basin: { center: [89.2, 42.95], zoom: 8.3, pitch: 62, bearing: 22, exaggeration: 1.55 },
+        ridge: { center: [7.85, 46.58], zoom: 10.4, pitch: 70, bearing: -35, exaggeration: 1.35 },
+        valley: { center: [-112.12, 36.09], zoom: 10.6, pitch: 70, bearing: 35, exaggeration: 1.35 },
+        saddle: { center: [86.9, 27.98], zoom: 11, pitch: 68, bearing: 18, exaggeration: 1.35 },
+        cliff: { center: [-111.89, 36.78], zoom: 10.2, pitch: 72, bearing: -24, exaggeration: 1.45 },
+        plain: { center: [116.4, 39.2], zoom: 7.4, pitch: 56, bearing: 16, exaggeration: 1.25 },
+        hills: { center: [119.6, 30.25], zoom: 8.8, pitch: 60, bearing: -18, exaggeration: 1.4 },
+        mountain: { center: [86.92, 27.99], zoom: 9.2, pitch: 70, bearing: 28, exaggeration: 1.5 },
+        plateau: { center: [91.1, 30.4], zoom: 7.5, pitch: 62, bearing: 30, exaggeration: 1.35 },
+        large_basin: { center: [84, 41], zoom: 6.9, pitch: 58, bearing: -18, exaggeration: 1.45 },
+        reservoir_site: { center: [111, 30.85], zoom: 9.1, pitch: 62, bearing: 20, exaggeration: 1.5 },
+        water_diversion: { center: [110.5, 31.2], zoom: 8.5, pitch: 62, bearing: -24, exaggeration: 1.45 },
+        road_route: { center: [102.45, 27.75], zoom: 8.6, pitch: 64, bearing: 18, exaggeration: 1.45 },
+        campsite_site: { center: [100.2, 27.1], zoom: 9.1, pitch: 60, bearing: -16, exaggeration: 1.35 },
+        agriculture_layout: { center: [103.8, 30.7], zoom: 8.5, pitch: 58, bearing: 14, exaggeration: 1.3 },
+      };
       const MODE_META = {
         landform: {
           label: "部位判读",
@@ -660,7 +1039,7 @@
         },
         application: {
           label: "应用选址",
-          ids: ["reservoir_site", "road_route", "campsite_site", "agriculture_layout"],
+          ids: ["reservoir_site", "water_diversion", "road_route", "campsite_site", "agriculture_layout"],
           note: "应用题先把等高线判读转成约束：避开陡坡、利用缓坡、顺应水系。",
         },
       };
@@ -686,6 +1065,10 @@
         mode: "landform",
         terrain: "peak",
         theme: "exam",
+        visualMode: "natural",
+        idealMode: true,
+        realTerrainStatus: "idle",
+        realTerrainMessage: "教学同源模型",
         relief: 1,
         verticalScale: 1,
         interval: 100,
@@ -694,15 +1077,19 @@
         activeSlogan: null,
         selectedPoint: null,
         mobilePanel: "terrain",
+        referenceCollapsed: false,
+        contourCollapsed: false,
+        referencePath: referencePathFor("A1_peak"),
+        referenceLoaded: false,
         profileStart: null,
         profileEnd: null,
         sliceLevels: [],
         sliceTimer: null,
         sliceIndex: -1,
         camera: {
-          radius: 12,
-          theta: Math.PI * 0.78,
-          phi: Math.PI * 0.32,
+          radius: 14.2,
+          theta: Math.PI * 0.72,
+          phi: Math.PI * 0.31,
         },
       };
 
@@ -714,20 +1101,45 @@
       let historyGroup;
       let selectionGroup;
       let profileLineGroup;
+      let terrainLights;
       let slicePlane;
+      let teachingSnapshot = null;
+      let renderSnapshot = null;
+      let pmremGenerator = null;
+      let ssaoComposer = null;
+      let ssaoRenderPass = null;
+      let ssaoPass = null;
       let dragState = null;
-      const gridSize = 121;
+      let mapLibreAssetsPromise = null;
+      let realTerrainMapInstance = null;
+      let realTerrainLoadToken = 0;
+      const gridSize = 181;
+      const terrainBaseY = -0.92;
       let lastTerrainGridSize = gridSize;
 
       function byId(id) {
         return document.getElementById(id);
       }
 
-      function params() {
+      function baseParams() {
         return {
           relief: state.relief,
           verticalScale: state.verticalScale,
         };
+      }
+
+      function teachingParams() {
+        return Object.assign({}, baseParams(), { detailScale: 0 });
+      }
+
+      function renderParams() {
+        return state.idealMode
+          ? teachingParams()
+          : Object.assign({}, baseParams(), { detailScale: 1, renderDetailScale: 1.55 });
+      }
+
+      function params() {
+        return teachingParams();
       }
 
       function currentMeta() {
@@ -738,13 +1150,433 @@
         return MODE_META[state.mode];
       }
 
+      function referenceAssetFor(card) {
+        return embeddedReferenceAssets[card] || embeddedReferenceAssets[`${card}.webp`] || "";
+      }
+
+      function referencePathFor(card) {
+        return referenceAssetFor(card) || `${LOCAL_REFERENCE_BASE}${card}.webp`;
+      }
+
       function currentSightResult() {
         if (!state.profileStart || !state.profileEnd) return null;
-        return core.lineOfSight(state.terrain, state.profileStart, state.profileEnd, 100, params());
+        return lineOfSightFromTeachingSnapshot(state.profileStart, state.profileEnd, 100);
       }
 
       function terrainGridSize() {
-        return window.matchMedia("(max-width: 1080px)").matches ? 81 : gridSize;
+        return window.matchMedia("(max-width: 1080px)").matches ? 101 : gridSize;
+      }
+
+      function buildSnapshot(grid, snapshotParams) {
+        const levels = core.contourLevels(grid.min, grid.max, state.interval);
+        const contours = levels.map((level, index) => {
+          const strong = level % 500 === 0 || index === 0 || index === levels.length - 1;
+          return {
+            level,
+            strong,
+            polylines: core.contourPolylines(grid, level).filter((line) => line.length > 0.006),
+          };
+        });
+        return {
+          terrain: state.terrain,
+          params: snapshotParams,
+          interval: state.interval,
+          grid,
+          levels,
+          contours,
+        };
+      }
+
+      function buildTeachingSnapshot() {
+        const activeGridSize = terrainGridSize();
+        const snapshotParams = teachingParams();
+        const grid = core.sampleTeachingGrid(state.terrain, activeGridSize, snapshotParams);
+        return buildSnapshot(grid, snapshotParams);
+      }
+
+      function buildRenderSnapshot() {
+        const activeGridSize = terrainGridSize();
+        const snapshotParams = renderParams();
+        const grid = state.idealMode
+          ? core.sampleTeachingGrid(state.terrain, activeGridSize, snapshotParams)
+          : core.sampleRenderGrid(state.terrain, activeGridSize, snapshotParams);
+        return buildSnapshot(grid, snapshotParams);
+      }
+
+      function ensureTeachingSnapshot() {
+        if (!teachingSnapshot) {
+          teachingSnapshot = buildTeachingSnapshot();
+          lastTerrainGridSize = teachingSnapshot.grid.size;
+        }
+        return teachingSnapshot;
+      }
+
+      function ensureRenderSnapshot() {
+        if (!renderSnapshot) {
+          renderSnapshot = buildRenderSnapshot();
+          lastTerrainGridSize = renderSnapshot.grid.size;
+        }
+        return renderSnapshot;
+      }
+
+      function heightFromTeachingSnapshot(x, z) {
+        const snapshot = ensureTeachingSnapshot();
+        const grid = snapshot.grid;
+        const gx = ((Math.max(-1, Math.min(1, x)) + 1) / 2) * (grid.size - 1);
+        const gz = ((Math.max(-1, Math.min(1, z)) + 1) / 2) * (grid.size - 1);
+        const col = Math.max(0, Math.min(grid.size - 2, Math.floor(gx)));
+        const row = Math.max(0, Math.min(grid.size - 2, Math.floor(gz)));
+        const tx = gx - col;
+        const tz = gz - row;
+        const a = grid.values[row * grid.size + col];
+        const b = grid.values[row * grid.size + col + 1];
+        const c = grid.values[(row + 1) * grid.size + col];
+        const d = grid.values[(row + 1) * grid.size + col + 1];
+        return a * (1 - tx) * (1 - tz) + b * tx * (1 - tz) + c * (1 - tx) * tz + d * tx * tz;
+      }
+
+      function profileSamplesFromTeachingSnapshot(start, end, count) {
+        const total = Math.max(2, count || 80);
+        const samples = [];
+        for (let index = 0; index < total; index += 1) {
+          const t = index / (total - 1);
+          const x = start.x + (end.x - start.x) * t;
+          const z = start.z + (end.z - start.z) * t;
+          samples.push({ t, x, z, height: heightFromTeachingSnapshot(x, z) });
+        }
+        return samples;
+      }
+
+      function lineOfSightFromTeachingSnapshot(start, end, count) {
+        const samples = profileSamplesFromTeachingSnapshot(start, end, count || 100);
+        const startHeight = samples[0].height;
+        const endHeight = samples[samples.length - 1].height;
+        const tolerance = 0.5;
+        let obstruction = null;
+        let clearanceMin = Infinity;
+
+        for (const sample of samples) {
+          sample.sightHeight = startHeight + (endHeight - startHeight) * sample.t;
+          sample.clearance = sample.sightHeight - sample.height;
+          sample.blocked = sample.t > 0 && sample.t < 1 && sample.clearance < -tolerance;
+          if (sample.t > 0 && sample.t < 1) {
+            clearanceMin = Math.min(clearanceMin, sample.clearance);
+          }
+          if (!obstruction && sample.blocked) obstruction = sample;
+        }
+
+        return {
+          visible: obstruction === null,
+          obstruction,
+          clearanceMin: clearanceMin === Infinity ? 0 : clearanceMin,
+          samples,
+        };
+      }
+
+      function redrawPanelsSoon() {
+        window.requestAnimationFrame(function () {
+          drawContourCanvas();
+          drawProfileCanvas();
+          drawReferenceCard();
+        });
+      }
+
+      function updateWorkspaceLayout() {
+        workspace.classList.toggle("is-reference-collapsed", state.referenceCollapsed);
+        workspace.classList.toggle("is-contour-collapsed", state.contourCollapsed);
+        byId("toggleReferencePanel").setAttribute("aria-expanded", String(!state.referenceCollapsed));
+        byId("toggleContourPanel").setAttribute("aria-expanded", String(!state.contourCollapsed));
+        byId("toggleReferencePanel").textContent = state.referenceCollapsed ? "展开" : "隐藏";
+        byId("toggleContourPanel").textContent = state.contourCollapsed ? "展开" : "隐藏";
+        redrawPanelsSoon();
+      }
+
+      function updateVisualModeButton() {
+        const isNatural = state.visualMode === "natural";
+        document.body.dataset.visualMode = state.visualMode;
+        byId("themeToggle").textContent = isNatural ? "自然写实" : "教学清爽";
+        byId("themeToggle").setAttribute("aria-pressed", String(isNatural));
+        byId("themeToggle").title = isNatural
+          ? "当前为自然写实：高密度网格、坡度暗化和自然光照只影响 3D 视觉。"
+          : "当前为教学清爽：保留简洁色带，便于讲题读线。";
+      }
+
+      function updateIdealModeButton() {
+        const button = byId("idealToggle");
+        if (!button) return;
+        button.textContent = state.idealMode ? "理想开启" : "真实细节";
+        button.setAttribute("aria-pressed", String(state.idealMode));
+        button.title = state.idealMode
+          ? "理想状态：3D 地形、3D 等高线和右侧卷面图共用光滑教学高度场。"
+          : "真实细节：优先加载在线真实地形；不可用时显示本地真实细节，右侧卷面图保持教学清晰。";
+      }
+
+      function setRealTerrainStatus(status, message) {
+        state.realTerrainStatus = status;
+        state.realTerrainMessage = message;
+        const badge = byId("realTerrainStatus");
+        if (badge) badge.textContent = message;
+        if (terrainStage) {
+          terrainStage.dataset.realTerrainStatus = status;
+          terrainStage.classList.toggle("is-online-terrain", !state.idealMode && status === "online");
+          terrainStage.classList.toggle("is-local-terrain", state.idealMode || status !== "online");
+        }
+      }
+
+      function realTerrainViewpoint(type) {
+        return REAL_TERRAIN_VIEWPOINTS[type] || REAL_TERRAIN_VIEWPOINTS.mountain;
+      }
+
+      function loadExternalStyle(url) {
+        const existing = document.querySelector(`link[href="${url}"]`);
+        if (existing) return Promise.resolve();
+        return new Promise((resolve, reject) => {
+          const link = document.createElement("link");
+          const timer = window.setTimeout(() => reject(new Error(`MapLibre CSS timeout: ${url}`)), MAPLIBRE_ASSET_TIMEOUT);
+          link.rel = "stylesheet";
+          link.href = url;
+          link.onload = function () {
+            window.clearTimeout(timer);
+            resolve();
+          };
+          link.onerror = function () {
+            window.clearTimeout(timer);
+            reject(new Error(`MapLibre CSS failed: ${url}`));
+          };
+          document.head.appendChild(link);
+        });
+      }
+
+      function loadExternalScript(url) {
+        if (window.maplibregl) return Promise.resolve();
+        const existing = document.querySelector(`script[src="${url}"]`);
+        if (existing) {
+          return new Promise((resolve, reject) => {
+            const timer = window.setTimeout(() => reject(new Error(`MapLibre JS timeout: ${url}`)), MAPLIBRE_ASSET_TIMEOUT);
+            existing.addEventListener("load", function onLoad() {
+              window.clearTimeout(timer);
+              existing.removeEventListener("load", onLoad);
+              resolve();
+            }, { once: true });
+            existing.addEventListener("error", function onError() {
+              window.clearTimeout(timer);
+              existing.removeEventListener("error", onError);
+              reject(new Error(`MapLibre JS failed: ${url}`));
+            }, { once: true });
+          });
+        }
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          const timer = window.setTimeout(() => reject(new Error(`MapLibre JS timeout: ${url}`)), MAPLIBRE_ASSET_TIMEOUT);
+          script.src = url;
+          script.defer = true;
+          script.onload = function () {
+            window.clearTimeout(timer);
+            resolve();
+          };
+          script.onerror = function () {
+            window.clearTimeout(timer);
+            reject(new Error(`MapLibre JS failed: ${url}`));
+          };
+          document.head.appendChild(script);
+        });
+      }
+
+      function loadMapLibreAssets() {
+        if (!mapLibreAssetsPromise) {
+          mapLibreAssetsPromise = Promise.all([
+            loadExternalStyle(MAPLIBRE_CSS_URL),
+            loadExternalScript(MAPLIBRE_JS_URL),
+          ]).then(() => {
+            if (!window.maplibregl) throw new Error("MapLibre loaded without maplibregl");
+          }).catch((error) => {
+            mapLibreAssetsPromise = null;
+            throw error;
+          });
+        }
+        return mapLibreAssetsPromise;
+      }
+
+      function createMapLibreStyle(demSource) {
+        const terrainSource = {
+          type: "raster-dem",
+          url: demSource.url,
+          tileSize: demSource.tileSize || 256,
+        };
+        if (demSource.encoding) terrainSource.encoding = demSource.encoding;
+        return {
+          version: 8,
+          sources: {
+            osm: {
+              type: "raster",
+              tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+              tileSize: 256,
+              attribution: "© OpenStreetMap contributors",
+            },
+            terrain: terrainSource,
+          },
+          layers: [
+            {
+              id: "osm",
+              type: "raster",
+              source: "osm",
+              paint: {
+                "raster-saturation": -0.18,
+                "raster-contrast": 0.08,
+                "raster-brightness-min": 0.18,
+                "raster-brightness-max": 0.92,
+              },
+            },
+            {
+              id: "terrain-hillshade",
+              type: "hillshade",
+              source: "terrain",
+              paint: {
+                "hillshade-shadow-color": "#22332d",
+                "hillshade-highlight-color": "#f3dfb4",
+                "hillshade-accent-color": "#5d725f",
+                "hillshade-exaggeration": 0.55,
+                "hillshade-illumination-direction": 315,
+              },
+            },
+          ],
+        };
+      }
+
+      function destroyRealTerrainMap() {
+        if (!realTerrainMapInstance) return;
+        try {
+          realTerrainMapInstance.remove();
+        } catch (error) {
+          // The local Three.js fallback remains available even if cleanup is noisy.
+        }
+        realTerrainMapInstance = null;
+      }
+
+      function waitForOnlineTerrain(map, token) {
+        return new Promise((resolve, reject) => {
+          const timer = window.setTimeout(() => {
+            cleanup();
+            reject(new Error("MapLibre DEM timeout"));
+          }, ONLINE_TERRAIN_TIMEOUT);
+          function cleanup() {
+            window.clearTimeout(timer);
+            map.off("idle", onIdle);
+            map.off("error", onError);
+          }
+          function onIdle() {
+            cleanup();
+            resolve();
+          }
+          function onError(event) {
+            const sourceId = event && (event.sourceId || event.sourceID);
+            if (sourceId && sourceId !== "terrain" && sourceId !== "osm") return;
+            cleanup();
+            reject(event && event.error ? event.error : new Error("MapLibre source error"));
+          }
+          map.on("idle", onIdle);
+          map.on("error", onError);
+          if (token !== realTerrainLoadToken) {
+            cleanup();
+            reject(new Error("stale MapLibre request"));
+          }
+        });
+      }
+
+      async function initRealTerrainMap(type, sourceIndex, token) {
+        if (!realTerrainMap || !window.maplibregl) throw new Error("MapLibre container unavailable");
+        const source = REAL_TERRAIN_DEM_SOURCES[sourceIndex];
+        const view = realTerrainViewpoint(type);
+        destroyRealTerrainMap();
+        realTerrainMapInstance = new maplibregl.Map({
+          container: realTerrainMap,
+          style: createMapLibreStyle(source),
+          center: view.center,
+          zoom: view.zoom,
+          pitch: view.pitch,
+          bearing: view.bearing,
+          attributionControl: false,
+          interactive: true,
+        });
+        realTerrainMapInstance.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
+        realTerrainMapInstance.on("load", function () {
+          if (!realTerrainMapInstance || token !== realTerrainLoadToken) return;
+          realTerrainMapInstance.setTerrain({ source: "terrain", exaggeration: view.exaggeration });
+        });
+        realTerrainMapInstance.on("webglcontextlost", function () {
+          fallbackToLocalRealTerrain("MapLibre WebGL context lost");
+        });
+        await waitForOnlineTerrain(realTerrainMapInstance, token);
+        if (token !== realTerrainLoadToken) throw new Error("stale MapLibre request");
+        realTerrainMapInstance.resize();
+      }
+
+      function fallbackToLocalRealTerrain(reason) {
+        destroyRealTerrainMap();
+        setRealTerrainStatus(state.idealMode ? "idle" : "fallback", state.idealMode ? "教学同源模型" : "本地真实细节");
+        if (reason) console.warn(reason);
+      }
+
+      async function showOnlineTerrain(type) {
+        const token = ++realTerrainLoadToken;
+        setRealTerrainStatus("loading", "正在连接在线真实地形");
+        try {
+          await loadMapLibreAssets();
+          if (token !== realTerrainLoadToken) return;
+          for (let index = 0; index < REAL_TERRAIN_DEM_SOURCES.length; index += 1) {
+            try {
+              setRealTerrainStatus("loading", `正在连接${REAL_TERRAIN_DEM_SOURCES[index].label}`);
+              await initRealTerrainMap(type, index, token);
+              if (token !== realTerrainLoadToken) return;
+              setRealTerrainStatus("online", "在线真实地形");
+              return;
+            } catch (error) {
+              if (token !== realTerrainLoadToken) return;
+              destroyRealTerrainMap();
+              if (index === REAL_TERRAIN_DEM_SOURCES.length - 1) throw error;
+            }
+          }
+        } catch (error) {
+          if (token === realTerrainLoadToken) fallbackToLocalRealTerrain(error.message || "MapLibre terrain unavailable");
+        }
+      }
+
+      function updateTerrainDisplayMode() {
+        if (state.idealMode) {
+          realTerrainLoadToken += 1;
+          fallbackToLocalRealTerrain();
+          return;
+        }
+        if (state.realTerrainStatus === "online") {
+          setRealTerrainStatus("online", "在线真实地形");
+          if (realTerrainMapInstance) {
+            const view = realTerrainViewpoint(state.terrain);
+            realTerrainMapInstance.jumpTo({
+              center: view.center,
+              zoom: view.zoom,
+              pitch: view.pitch,
+              bearing: view.bearing,
+            });
+            realTerrainMapInstance.setTerrain({ source: "terrain", exaggeration: view.exaggeration });
+            realTerrainMapInstance.resize();
+          }
+          return;
+        }
+        if (state.realTerrainStatus === "loading" || state.realTerrainStatus === "fallback") {
+          setRealTerrainStatus(state.realTerrainStatus, state.realTerrainMessage);
+          return;
+        }
+        showOnlineTerrain(state.terrain);
+      }
+
+      function setReferencePanelCollapsed(collapsed) {
+        state.referenceCollapsed = collapsed;
+        updateWorkspaceLayout();
+      }
+
+      function setContourPanelCollapsed(collapsed) {
+        state.contourCollapsed = collapsed;
+        updateWorkspaceLayout();
       }
 
       function setMobilePanel(panel) {
@@ -758,6 +1590,35 @@
         drawContourCanvas();
         drawProfileCanvas();
         drawReferenceCard();
+      }
+
+      function openReferenceLightbox() {
+        const meta = currentMeta();
+        byId("referenceLightboxTitle").textContent = `${meta.card.replace("_", " ")} · ${meta.label}`;
+        byId("referenceLightboxStatus").textContent = state.referenceLoaded
+          ? `${state.referencePath} 已加载。`
+          : `${state.referencePath} 暂未生成，显示解析函数临时卡。`;
+
+        if (state.referenceLoaded) {
+          referenceLightboxImage.src = referenceAssetFor(meta.card) || state.referencePath;
+          referenceLightboxImage.hidden = false;
+          referenceLightboxCanvas.hidden = true;
+        } else {
+          referenceLightboxImage.hidden = true;
+          referenceLightboxCanvas.hidden = false;
+          const ctx = referenceLightboxCanvas.getContext("2d");
+          referenceLightboxCanvas.width = 1200;
+          referenceLightboxCanvas.height = 1200;
+          ctx.clearRect(0, 0, referenceLightboxCanvas.width, referenceLightboxCanvas.height);
+          ctx.drawImage(referenceCanvas, 0, 0, referenceLightboxCanvas.width, referenceLightboxCanvas.height);
+        }
+
+        referenceLightbox.hidden = false;
+        byId("closeReferenceLightbox").focus();
+      }
+
+      function closeReferenceLightbox() {
+        referenceLightbox.hidden = true;
       }
 
       function renderTerrainButtons() {
@@ -803,6 +1664,53 @@
         return false;
       }
 
+      function setupEnvironmentMap() {
+        if (!window.THREE || !THREE.PMREMGenerator || !renderer || !scene || scene.environment) return;
+        try {
+          pmremGenerator = pmremGenerator || new THREE.PMREMGenerator(renderer);
+          const envScene = new THREE.Scene();
+          envScene.background = new THREE.Color(0x405247);
+          const envMap = pmremGenerator.fromScene(envScene, 0.04);
+          scene.environment = envMap.texture;
+        } catch (error) {
+          scene.environment = null;
+        }
+      }
+
+      function shouldUseSSAO() {
+        return state.visualMode === "natural"
+          && !window.matchMedia("(max-width: 1080px)").matches
+          && window.THREE
+          && THREE.EffectComposer
+          && THREE.RenderPass
+          && THREE.SSAOPass;
+      }
+
+      function setupSSAO() {
+        if (!renderer || !scene || !camera || !shouldUseSSAO()) {
+          ssaoComposer = null;
+          ssaoRenderPass = null;
+          ssaoPass = null;
+          return;
+        }
+
+        try {
+          const rect = terrainCanvas.getBoundingClientRect();
+          ssaoComposer = new THREE.EffectComposer(renderer);
+          ssaoRenderPass = new THREE.RenderPass(scene, camera);
+          ssaoPass = new THREE.SSAOPass(scene, camera, rect.width, rect.height);
+          ssaoPass.kernelRadius = 10;
+          ssaoPass.minDistance = 0.004;
+          ssaoPass.maxDistance = 0.14;
+          ssaoComposer.addPass(ssaoRenderPass);
+          ssaoComposer.addPass(ssaoPass);
+        } catch (error) {
+          ssaoComposer = null;
+          ssaoRenderPass = null;
+          ssaoPass = null;
+        }
+      }
+
       function initThree() {
         if (!window.THREE) {
           drawCanvasFallback();
@@ -819,13 +1727,30 @@
           alpha: false,
         });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.05;
+        setupEnvironmentMap();
 
-        const ambient = new THREE.AmbientLight(0xffffff, 0.58);
-        const key = new THREE.DirectionalLight(0xfff1d0, 1.1);
-        key.position.set(-4, 8, 5);
-        const fill = new THREE.DirectionalLight(0x88c7ff, 0.55);
+        const ambient = new THREE.AmbientLight(0xffffff, 0.26);
+        const hemi = new THREE.HemisphereLight(0xcfe8ff, 0x3c2f21, 0.62);
+        const key = new THREE.DirectionalLight(0xffe2b7, 1.28);
+        key.position.set(-5.5, 8.8, 4.4);
+        key.castShadow = true;
+        key.shadow.mapSize.set(2048, 2048);
+        key.shadow.camera.left = -8;
+        key.shadow.camera.right = 8;
+        key.shadow.camera.top = 8;
+        key.shadow.camera.bottom = -8;
+        key.shadow.camera.near = 1;
+        key.shadow.camera.far = 24;
+        const fill = new THREE.DirectionalLight(0x8db6ff, 0.35);
         fill.position.set(5, 4, -5);
-        scene.add(ambient, key, fill);
+        terrainLights = { ambient, hemi, key, fill };
+        scene.add(ambient, hemi, key, fill);
+        updateTerrainLighting();
 
         contourGroup = new THREE.Group();
         historyGroup = new THREE.Group();
@@ -852,29 +1777,114 @@
         terrainCanvas.addEventListener("wheel", onWheel, { passive: false });
 
         updateScene();
+        setupSSAO();
         animate();
       }
 
-      function makeTerrainGeometry(grid) {
+      function clamp01(value) {
+        return Math.max(0, Math.min(1, value));
+      }
+
+      function gridValueAt(grid, col, row) {
+        const safeCol = Math.max(0, Math.min(grid.size - 1, col));
+        const safeRow = Math.max(0, Math.min(grid.size - 1, row));
+        return grid.values[safeRow * grid.size + safeCol];
+      }
+
+      function terrainVisualSlope(grid, col, row) {
+        const spacing = 2 / Math.max(1, grid.size - 1);
+        const left = gridValueAt(grid, col - 1, row);
+        const right = gridValueAt(grid, col + 1, row);
+        const down = gridValueAt(grid, col, row - 1);
+        const up = gridValueAt(grid, col, row + 1);
+        const dx = (right - left) / (spacing * (col === 0 || col === grid.size - 1 ? 1 : 2));
+        const dz = (up - down) / (spacing * (row === 0 || row === grid.size - 1 ? 1 : 2));
+        return clamp01(Math.hypot(dx, dz) / 880);
+      }
+
+      function terrainSurfaceNoise(x, z, height) {
+        const broad = Math.sin(x * 8.7 + z * 5.1 + height * 0.011) * 0.5;
+        const grain = Math.sin((x - z) * 22.4 + height * 0.017) * 0.32;
+        const cross = Math.cos((x + z) * 15.8 - height * 0.009) * 0.18;
+        return broad + grain + cross;
+      }
+
+      function setRampColor(target, t) {
+        const stops = [
+          { at: 0, color: 0x2f5f48 },
+          { at: 0.28, color: 0x6f8a4d },
+          { at: 0.52, color: 0xa88752 },
+          { at: 0.76, color: 0xb09375 },
+          { at: 1, color: 0xd6cab4 },
+        ];
+        for (let index = 1; index < stops.length; index += 1) {
+          const prev = stops[index - 1];
+          const next = stops[index];
+          if (t <= next.at) {
+            const localT = clamp01((t - prev.at) / Math.max(0.001, next.at - prev.at));
+            return target
+              .set(prev.color)
+              .lerp(new THREE.Color(next.color), localT);
+          }
+        }
+        return target.set(stops[stops.length - 1].color);
+      }
+
+      function scaleColor(color, factor) {
+        color.r = clamp01(color.r * factor);
+        color.g = clamp01(color.g * factor);
+        color.b = clamp01(color.b * factor);
+        return color;
+      }
+
+      function terrainColorForVertex(grid, row, col, target) {
+        const height = grid.values[row * grid.size + col];
+        const t = (height - grid.min) / Math.max(1, grid.max - grid.min);
+
+        if (state.visualMode !== "natural") {
+          return target.setHSL(0.24 - t * 0.11, 0.42, 0.38 + t * 0.34);
+        }
+
+        const x = -1 + (2 * col) / (grid.size - 1);
+        const z = -1 + (2 * row) / (grid.size - 1);
+        const slope = terrainVisualSlope(grid, col, row);
+        const roughness = grid.roughnessValues ? grid.roughnessValues[row * grid.size + col] : slope;
+        const detail = grid.detailValues ? Math.abs(grid.detailValues[row * grid.size + col]) : 0;
+        const texture = terrainSurfaceNoise(x, z, height);
+        setRampColor(target, t);
+
+        if (t < 0.26 && slope < 0.42) {
+          target.lerp(new THREE.Color(0x2e6f63), (0.26 - t) * 0.45);
+        }
+        if (slope > 0.36) {
+          target.lerp(new THREE.Color(0x4b4338), clamp01((slope - 0.3) * 0.5 + roughness * 0.16));
+        }
+        if (t > 0.72) {
+          target.lerp(new THREE.Color(0xd8cfbd), (t - 0.72) * 0.45);
+        }
+
+        return scaleColor(target, 0.94 + texture * 0.045 - slope * 0.15 - detail * 0.0018 + t * 0.04);
+      }
+
+      function makeSolidTerrainGeometry(grid) {
         const positions = [];
         const colors = [];
         const indices = [];
         const color = new THREE.Color();
+        const sideColor = new THREE.Color();
+        const topIndices = [];
 
         for (let row = 0; row < grid.size; row += 1) {
+          topIndices[row] = [];
           const z = -5 + (10 * row) / (grid.size - 1);
           for (let col = 0; col < grid.size; col += 1) {
             const x = -5 + (10 * col) / (grid.size - 1);
             const height = grid.values[row * grid.size + col];
             const y = heightToY(height);
+            topIndices[row][col] = positions.length / 3;
             positions.push(x, y, z);
 
-            const t = (height - grid.min) / Math.max(1, grid.max - grid.min);
-            if (state.theme === "geo") {
-              color.setHSL(0.43 - t * 0.22, 0.45 + t * 0.25, 0.24 + t * 0.36);
-            } else {
-              color.setHSL(0.24 - t * 0.11, 0.42, 0.38 + t * 0.34);
-            }
+            terrainColorForVertex(grid, row, col, color);
             colors.push(color.r, color.g, color.b);
           }
         }
@@ -889,12 +1899,54 @@
           }
         }
 
+        function addBottomVertex(x, z, sourceRow, sourceCol) {
+          terrainColorForVertex(grid, sourceRow, sourceCol, sideColor);
+          sideColor.multiplyScalar(0.42);
+          const index = positions.length / 3;
+          positions.push(x, terrainBaseY, z);
+          colors.push(sideColor.r, sideColor.g, sideColor.b);
+          return index;
+        }
+
+        function addSide(rowA, colA, rowB, colB) {
+          const xA = -5 + (10 * colA) / (grid.size - 1);
+          const zA = -5 + (10 * rowA) / (grid.size - 1);
+          const xB = -5 + (10 * colB) / (grid.size - 1);
+          const zB = -5 + (10 * rowB) / (grid.size - 1);
+          const topA = topIndices[rowA][colA];
+          const topB = topIndices[rowB][colB];
+          const bottomA = addBottomVertex(xA, zA, rowA, colA);
+          const bottomB = addBottomVertex(xB, zB, rowB, colB);
+          indices.push(topA, bottomA, topB, topB, bottomA, bottomB);
+        }
+
+        for (let col = 0; col < grid.size - 1; col += 1) {
+          addSide(0, col, 0, col + 1);
+          addSide(grid.size - 1, col + 1, grid.size - 1, col);
+        }
+        for (let row = 0; row < grid.size - 1; row += 1) {
+          addSide(row + 1, 0, row, 0);
+          addSide(row, grid.size - 1, row + 1, grid.size - 1);
+        }
+
+        const bottomColor = new THREE.Color(0x26322d);
+        const bottomStart = positions.length / 3;
+        positions.push(-5, terrainBaseY, -5, 5, terrainBaseY, -5, 5, terrainBaseY, 5, -5, terrainBaseY, 5);
+        for (let i = 0; i < 4; i += 1) {
+          colors.push(bottomColor.r, bottomColor.g, bottomColor.b);
+        }
+        indices.push(bottomStart, bottomStart + 1, bottomStart + 2, bottomStart, bottomStart + 2, bottomStart + 3);
+
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
         geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
         geometry.setIndex(indices);
         geometry.computeVertexNormals();
         return geometry;
+      }
+
+      function makeTerrainGeometry(grid) {
+        return makeSolidTerrainGeometry(grid);
       }
 
       function clearGroup(group) {
@@ -906,37 +1958,123 @@
         }
       }
 
-      function lineSegmentsForLevel(grid, level, colorValue, opacity, yOffset) {
-        const segments = core.contourSegments(grid, level);
-        const positions = [];
-        for (const segment of segments) {
-          positions.push(segment[0] * 5, heightToY(level) + yOffset, segment[1] * 5);
-          positions.push(segment[2] * 5, heightToY(level) + yOffset, segment[3] * 5);
+      function makeTerrainMaterial() {
+        return new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          roughness: state.visualMode === "natural" ? 0.88 : 0.86,
+          metalness: 0.015,
+          envMapIntensity: state.visualMode === "natural" ? 0.42 : 0.18,
+          flatShading: false,
+        });
+      }
+
+      function updateTerrainLighting() {
+        if (!scene || !terrainLights) return;
+        if (state.visualMode === "natural") {
+          scene.background.set(0x111a16);
+          terrainLights.ambient.intensity = 0.24;
+          terrainLights.hemi.intensity = 0.68;
+          terrainLights.key.intensity = 1.36;
+          terrainLights.fill.intensity = 0.36;
+          terrainLights.key.color.set(0xffdfaa);
+          terrainLights.fill.color.set(0x8db6ff);
+          if (renderer) renderer.toneMappingExposure = 1.08;
+          return;
         }
+
+        scene.background.set(0x101816);
+        terrainLights.ambient.intensity = 0.54;
+        terrainLights.hemi.intensity = 0.36;
+        terrainLights.key.intensity = 1.02;
+        terrainLights.fill.intensity = 0.42;
+        terrainLights.key.color.set(0xfff1d0);
+        terrainLights.fill.color.set(0x88c7ff);
+        if (renderer) renderer.toneMappingExposure = 1;
+      }
+
+      function contourLineColor(strong) {
+        if (state.visualMode === "natural") {
+          return strong ? 0xf3d79a : 0xbc8b54;
+        }
+        return strong ? 0x2b2018 : 0x684522;
+      }
+
+      function contourRibbonForPolyline(polyline, colorValue, opacity, yOffset, lineWidth) {
+        const positions = [];
+        const indices = [];
+        const halfWidth = (lineWidth || 0.035) / 2;
+        const y = heightToY(polyline.level) + (yOffset || 0.06);
+        for (let index = 1; index < polyline.points.length; index += 1) {
+          const a = polyline.points[index - 1];
+          const b = polyline.points[index];
+          const ax = a.x * 5;
+          const az = a.z * 5;
+          const bx = b.x * 5;
+          const bz = b.z * 5;
+          const dx = bx - ax;
+          const dz = bz - az;
+          const length = Math.hypot(dx, dz);
+          if (length < 0.0001) continue;
+          const nx = (-dz / length) * halfWidth;
+          const nz = (dx / length) * halfWidth;
+          const start = positions.length / 3;
+          positions.push(
+            ax - nx, y, az - nz,
+            ax + nx, y, az + nz,
+            bx - nx, y, bz - nz,
+            bx + nx, y, bz + nz,
+          );
+          indices.push(start, start + 1, start + 2, start + 2, start + 1, start + 3);
+        }
+
+        if (!positions.length) return null;
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-        const material = new THREE.LineBasicMaterial({
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+        const material = new THREE.MeshBasicMaterial({
           color: colorValue,
           transparent: opacity < 1,
           opacity,
+          side: THREE.DoubleSide,
+          depthWrite: false,
         });
-        return new THREE.LineSegments(geometry, material);
+        return new THREE.Mesh(geometry, material);
+      }
+
+      function contourMeshesForLevel(contour, colorValue, opacity, yOffset, lineWidth) {
+        const group = new THREE.Group();
+        for (const polyline of contour.polylines) {
+          const ribbon = contourRibbonForPolyline(polyline, colorValue, opacity, yOffset, lineWidth);
+          if (ribbon) group.add(ribbon);
+        }
+        return group;
+      }
+
+      function lineSegmentsForLevel(grid, level, colorValue, opacity, yOffset, lineWidth) {
+        return contourMeshesForLevel({
+          level,
+          polylines: core.contourPolylines(grid, level),
+        }, colorValue, opacity, yOffset, lineWidth || 0.035);
       }
 
       function updateScene() {
         if (!renderer || !scene) return;
+        teachingSnapshot = buildTeachingSnapshot();
+        renderSnapshot = buildRenderSnapshot();
+        lastTerrainGridSize = renderSnapshot.grid.size;
         if (state.selectedPoint) {
-          state.selectedPoint.height = core.heightAt(state.terrain, state.selectedPoint.x, state.selectedPoint.z, params());
+          state.selectedPoint.height = heightFromTeachingSnapshot(state.selectedPoint.x, state.selectedPoint.z);
         }
         if (state.profileStart) {
-          state.profileStart.height = core.heightAt(state.terrain, state.profileStart.x, state.profileStart.z, params());
+          state.profileStart.height = heightFromTeachingSnapshot(state.profileStart.x, state.profileStart.z);
         }
         if (state.profileEnd) {
-          state.profileEnd.height = core.heightAt(state.terrain, state.profileEnd.x, state.profileEnd.z, params());
+          state.profileEnd.height = heightFromTeachingSnapshot(state.profileEnd.x, state.profileEnd.z);
         }
-        const activeGridSize = terrainGridSize();
-        lastTerrainGridSize = activeGridSize;
-        const grid = core.sampleGrid(state.terrain, activeGridSize, params());
+        const grid = renderSnapshot.grid;
+        updateTerrainLighting();
+        setupSSAO();
         if (terrainMesh) {
           terrainMesh.geometry.dispose();
           terrainMesh.material.dispose();
@@ -944,20 +2082,22 @@
         }
 
         terrainMesh = new THREE.Mesh(
-          makeTerrainGeometry(grid),
-          new THREE.MeshStandardMaterial({
-            vertexColors: true,
-            roughness: 0.86,
-            metalness: 0.02,
-          }),
+          makeSolidTerrainGeometry(grid),
+          makeTerrainMaterial(),
         );
+        terrainMesh.castShadow = true;
+        terrainMesh.receiveShadow = true;
         scene.add(terrainMesh);
 
         clearGroup(contourGroup);
-        const levels = core.contourLevels(grid.min, grid.max, state.interval);
-        for (const level of levels) {
-          const strong = level % 500 === 0;
-          contourGroup.add(lineSegmentsForLevel(grid, level, strong ? 0x2b2018 : 0x684522, 0.82, 0.035));
+        for (const contour of renderSnapshot.contours) {
+          contourGroup.add(contourMeshesForLevel(
+            contour,
+            contourLineColor(contour.strong),
+            contour.strong ? 0.94 : 0.82,
+            0.055,
+            contour.strong ? 0.055 : 0.034,
+          ));
         }
 
         clearGroup(historyGroup);
@@ -970,6 +2110,7 @@
         drawContourCanvas();
         drawProfileCanvas();
         drawReferenceCard();
+        updateTerrainDisplayMode();
         updateCopy();
       }
 
@@ -988,7 +2129,7 @@
           radius * Math.cos(phi),
           radius * Math.sin(phi) * Math.sin(theta),
         );
-        camera.lookAt(0, 0, 0);
+        camera.lookAt(0, 0.75, 0);
       }
 
       function animate() {
@@ -1000,9 +2141,19 @@
           camera.aspect = rect.width / Math.max(1, rect.height);
           camera.updateProjectionMatrix();
           renderer.setSize(rect.width, rect.height, false);
+          if (ssaoComposer) {
+            ssaoComposer.setSize(rect.width, rect.height);
+          }
+          if (ssaoPass && ssaoPass.setSize) {
+            ssaoPass.setSize(rect.width, rect.height);
+          }
         }
         updateCameraForView();
-        renderer.render(scene, camera);
+        if (ssaoComposer && shouldUseSSAO()) {
+          ssaoComposer.render();
+        } else {
+          renderer.render(scene, camera);
+        }
       }
 
       function onPointerDown(event) {
@@ -1043,8 +2194,7 @@
         const pad = Math.min(w, h) * 0.08;
         const plotW = w - pad * 2;
         const plotH = h - pad * 2;
-        const grid = core.sampleGrid(state.terrain, 121, params());
-        const levels = core.contourLevels(grid.min, grid.max, state.interval);
+        const snapshot = ensureTeachingSnapshot();
 
         ctx.clearRect(0, 0, w, h);
         ctx.fillStyle = colors.paper;
@@ -1055,13 +2205,13 @@
         ctx.translate(pad, pad);
         drawMapFrame(ctx, plotW, plotH, colors);
 
-        for (const level of levels) {
-          const strong = level % 500 === 0 || level === levels[0] || level === levels[levels.length - 1];
-          drawContourLevel(ctx, grid, level, plotW, plotH, colors, strong);
+        for (const contour of snapshot.contours) {
+          drawContourLevel(ctx, contour, plotW, plotH, colors, contour.strong);
         }
 
         for (const level of state.sliceLevels) {
-          drawContourLevel(ctx, grid, level, plotW, plotH, colors, true, colors.blue);
+          const contour = snapshot.contours.find((item) => item.level === level);
+          if (contour) drawContourLevel(ctx, contour, plotW, plotH, colors, true, colors.blue);
         }
 
         drawSpecialMarks(ctx, plotW, plotH, colors);
@@ -1097,28 +2247,35 @@
         ctx.strokeRect(0, 0, width, height);
       }
 
-      function drawContourLevel(ctx, grid, level, width, height, colors, strong, overrideColor) {
-        const segments = core.contourSegments(grid, level);
-        ctx.strokeStyle = overrideColor || (strong ? colors.contourStrong : colors.contour);
-        ctx.lineWidth = (strong ? 2.4 : 1.2) * window.devicePixelRatio;
-        ctx.beginPath();
-        for (const segment of segments) {
-          const a = toCanvas(segment[0], segment[1], width, height);
-          const b = toCanvas(segment[2], segment[3], width, height);
+      function drawContourPolyline(ctx, polyline, width, height) {
+        for (let index = 1; index < polyline.points.length; index += 1) {
+          const a = toCanvas(polyline.points[index - 1].x, polyline.points[index - 1].z, width, height);
+          const b = toCanvas(polyline.points[index].x, polyline.points[index].z, width, height);
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
         }
+      }
+
+      function drawContourLevel(ctx, contour, width, height, colors, strong, overrideColor) {
+        ctx.strokeStyle = overrideColor || (strong ? colors.contourStrong : colors.contour);
+        ctx.lineWidth = (strong ? 2.4 : 1.2) * window.devicePixelRatio;
+        ctx.beginPath();
+        for (const polyline of contour.polylines) {
+          drawContourPolyline(ctx, polyline, width, height);
+        }
         ctx.stroke();
 
-        if (segments.length > 8 && strong) {
-          const segment = segments[Math.floor(segments.length * 0.35)];
-          const p = toCanvas((segment[0] + segment[2]) / 2, (segment[1] + segment[3]) / 2, width, height);
+        if (contour.polylines.length && strong) {
+          const longLines = contour.polylines.filter((line) => line.points.length > 3);
+          const line = longLines[Math.floor(longLines.length * 0.35)] || contour.polylines[0];
+          const point = line.points[Math.floor(line.points.length * 0.5)];
+          const p = toCanvas(point.x, point.z, width, height);
           ctx.save();
           ctx.fillStyle = colors.ink;
           ctx.font = `${13 * window.devicePixelRatio}px Microsoft YaHei, sans-serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillText(String(Math.round(level)), p.x, p.y);
+          ctx.fillText(String(Math.round(contour.level)), p.x, p.y);
           ctx.restore();
         }
       }
@@ -1269,6 +2426,40 @@
           label(ctx, "河流", width * 0.55, height * 0.74, colors);
         }
 
+        if (state.terrain === "water_diversion") {
+          const route = [
+            toCanvas(-0.68, 0.58, width, height),
+            toCanvas(-0.46, 0.38, width, height),
+            toCanvas(-0.2, 0.22, width, height),
+            toCanvas(0.08, 0.02, width, height),
+            toCanvas(0.34, -0.2, width, height),
+            toCanvas(0.62, -0.44, width, height),
+          ];
+
+          ctx.fillStyle = colorWithAlpha(colors.green, 0.18);
+          ctx.fillRect(width * 0.58, height * 0.2, width * 0.24, height * 0.26);
+          ctx.fillStyle = colorWithAlpha(colors.danger, 0.16);
+          ctx.fillRect(width * 0.38, height * 0.46, width * 0.16, height * 0.22);
+
+          ctx.strokeStyle = colors.blue;
+          ctx.lineWidth = 4 * window.devicePixelRatio;
+          ctx.beginPath();
+          route.forEach((p, index) => {
+            if (index === 0) ctx.moveTo(p.x, p.y);
+            else ctx.lineTo(p.x, p.y);
+          });
+          ctx.stroke();
+          for (let i = 0; i < route.length - 1; i += 2) {
+            drawArrow(ctx, route[i].x, route[i].y, route[i + 1].x, route[i + 1].y, colors.blue);
+          }
+
+          drawTriangle(ctx, route[0].x, route[0].y - 6 * window.devicePixelRatio, 12 * window.devicePixelRatio, colors.blue);
+          label(ctx, "水源点", route[0].x + 42 * window.devicePixelRatio, route[0].y, colors);
+          label(ctx, "引水线路", width * 0.44, height * 0.38, colors);
+          label(ctx, "避开陡坡", width * 0.46, height * 0.58, colors);
+          label(ctx, "受水区", width * 0.7, height * 0.32, colors);
+        }
+
         if (state.terrain === "road_route") {
           const route = [
             toCanvas(-0.82, -0.42, width, height),
@@ -1339,6 +2530,16 @@
       }
 
       function flowSamplePointsForTerrain() {
+        if (state.terrain === "ridge") {
+          return [
+            { x: -0.56, z: -0.38 },
+            { x: -0.2, z: -0.28 },
+            { x: 0.22, z: -0.12 },
+            { x: -0.24, z: 0.18 },
+            { x: 0.18, z: 0.3 },
+            { x: 0.56, z: 0.42 },
+          ];
+        }
         if (state.terrain === "valley") {
           return [
             { x: -0.58, z: 0.52 },
@@ -1371,13 +2572,22 @@
             { x: 0.02, z: -0.62 },
           ];
         }
+        if (state.terrain === "water_diversion") {
+          return [
+            { x: -0.64, z: 0.58 },
+            { x: -0.38, z: 0.36 },
+            { x: -0.08, z: 0.12 },
+            { x: 0.22, z: -0.12 },
+            { x: 0.5, z: -0.36 },
+          ];
+        }
         return [];
       }
 
       function drawFlowArrows(ctx, width, height, colors) {
         const points = flowSamplePointsForTerrain();
         if (!points.length) return;
-        const arrows = core.flowField(state.terrain, points, params());
+        const arrows = core.flowField(state.terrain, points, teachingParams());
         const length = state.terrain === "large_basin" ? 0.14 : 0.16;
 
         ctx.save();
@@ -1394,6 +2604,9 @@
         }
         if (state.terrain === "valley") {
           label(ctx, "水流向低处", width * 0.35, height * 0.68, colors);
+        }
+        if (state.terrain === "ridge") {
+          label(ctx, "两侧分水", width * 0.55, height * 0.36, colors);
         }
         ctx.restore();
       }
@@ -1541,7 +2754,7 @@
           return;
         }
 
-        const samples = core.profileSamples(state.terrain, state.profileStart, state.profileEnd, 90, params());
+        const samples = profileSamplesFromTeachingSnapshot(state.profileStart, state.profileEnd, 90);
         const sight = currentSightResult();
         const heights = samples.map((sample) => sample.height);
         const sightHeights = sight ? sight.samples.map((sample) => sample.sightHeight) : [];
@@ -1646,7 +2859,7 @@
         if (!state.profileEnd) return;
         addProfileMarker(state.profileEnd, 0xd9480f);
 
-        const samples = core.profileSamples(state.terrain, state.profileStart, state.profileEnd, 100, params());
+        const samples = profileSamplesFromTeachingSnapshot(state.profileStart, state.profileEnd, 100);
         const positions = [];
         for (const sample of samples) {
           positions.push(sample.x * 5, heightToY(sample.height) + 0.18, sample.z * 5);
@@ -1764,20 +2977,24 @@
         resizeCanvasToDisplaySize(referenceCanvas);
         const meta = currentMeta();
         const image = new Image();
-        const path = `images/processed/${meta.card}.webp`;
+        const embeddedAsset = referenceAssetFor(meta.card);
+        const path = referencePathFor(meta.card);
+        state.referencePath = path;
         image.onload = function () {
           const ctx = referenceCanvas.getContext("2d");
           ctx.clearRect(0, 0, referenceCanvas.width, referenceCanvas.height);
           ctx.drawImage(image, 0, 0, referenceCanvas.width, referenceCanvas.height);
+          state.referenceLoaded = true;
           byId("cardStatus").textContent = "GPT 参考图";
-          byId("cardNote").textContent = `${path} 已加载。`;
+          byId("cardNote").textContent = embeddedAsset ? `${meta.card}.webp 内嵌参考图已加载。` : `${path} 已加载。`;
         };
         image.onerror = function () {
+          state.referenceLoaded = false;
           drawGeneratedReferenceCard(meta);
           byId("cardStatus").textContent = "解析函数临时卡";
           byId("cardNote").textContent = `${path} 暂未生成，当前卡片由 h(x,z) 临时绘制。`;
         };
-        image.src = path;
+        image.src = embeddedAsset || path;
       }
 
       function drawGeneratedReferenceCard(meta) {
@@ -1805,9 +3022,9 @@
         ctx.save();
         ctx.translate(mapX, mapY);
         drawMapFrame(ctx, mapW, mapH, colors);
-        const grid = core.sampleGrid(state.terrain, 91, params());
-        for (const level of core.contourLevels(grid.min, grid.max, state.interval)) {
-          drawContourLevel(ctx, grid, level, mapW, mapH, colors, level % 500 === 0);
+        const snapshot = ensureTeachingSnapshot();
+        for (const contour of snapshot.contours) {
+          drawContourLevel(ctx, contour, mapW, mapH, colors, contour.strong);
         }
         drawSpecialMarks(ctx, mapW, mapH, colors);
         ctx.restore();
@@ -1833,7 +3050,7 @@
       }
 
       function drawInsetTerrain(ctx, x, y, width, height, colors) {
-        const grid = core.sampleGrid(state.terrain, 40, params());
+        const grid = core.sampleTeachingGrid(state.terrain, 40, teachingParams());
         ctx.save();
         ctx.translate(x, y);
         ctx.fillStyle = colorWithAlpha(colors.accent, 0.12);
@@ -1866,8 +3083,8 @@
         clearGroup(historyGroup);
         state.sliceLevels = [];
         state.sliceIndex = -1;
-        const grid = core.sampleGrid(state.terrain, gridSize, params());
-        const levels = core.contourLevels(grid.min, grid.max, state.interval);
+        const snapshot = ensureRenderSnapshot();
+        const levels = snapshot.levels;
         slicePlane.visible = true;
         byId("sliceHeight").textContent = "切面：准备";
 
@@ -1879,9 +3096,12 @@
             return;
           }
           const level = levels[state.sliceIndex];
+          const contour = snapshot.contours.find((item) => item.level === level);
           state.sliceLevels.push(level);
           slicePlane.position.y = heightToY(level);
-          historyGroup.add(lineSegmentsForLevel(grid, level, 0x51c9e6, 1, 0.12));
+          if (contour) {
+            historyGroup.add(contourMeshesForLevel(contour, 0x51c9e6, 1, 0.12, 0.06));
+          }
           byId("sliceHeight").textContent = `切面：${Math.round(level)}m`;
           drawContourCanvas();
         }, state.terrain === "cliff" ? 520 : 340);
@@ -1931,7 +3151,7 @@
         byId("contourStatus").textContent = `等高距 ${state.interval}m`;
         byId("legendPrimary").textContent = meta.rule;
         byId("legendSecondary").textContent = `${mode.label}中的 ${meta.label}、2D 等高线和切面轨迹共用同一个 h(x,z)。`;
-        byId("scalePill").textContent = state.mode === "application" ? "应用：选线 / 选址 / 布局" : "比例尺：示意 1格≈200m";
+        byId("scalePill").textContent = state.mode === "application" ? "应用：选线 / 引水 / 选址 / 布局" : "比例尺：示意 1格≈200m";
         renderSlogans();
         updateTeacherNote();
         updatePointReadout();
@@ -1955,12 +3175,20 @@
           byId("teacherNote").innerHTML = "<strong>水流与山谷：</strong>水流沿山谷线向低处汇流，流向与等高线凸出方向相反。";
           return;
         }
+        if (state.terrain === "ridge") {
+          byId("teacherNote").innerHTML = "<strong>分水岭：</strong>山脊线两侧坡面分别向外排水，短箭头用于说明分水方向。";
+          return;
+        }
         if (state.terrain === "basin" || state.terrain === "large_basin") {
           byId("teacherNote").innerHTML = "<strong>向心状水系：</strong>盆地四周高中间低，水流箭头由坡面指向中心低地。";
           return;
         }
         if (state.terrain === "reservoir_site") {
           byId("teacherNote").innerHTML = "<strong>水库坝址：</strong>河流经窄口下泄，坝址横跨峡谷窄口，上游宽阔低地形成库区。";
+          return;
+        }
+        if (state.terrain === "water_diversion") {
+          byId("teacherNote").innerHTML = "<strong>引水线路：</strong>从高处稳定水源引向低处受水区，线路尽量沿等高线缓降，避开陡坡和深谷。";
           return;
         }
         if (state.terrain === "road_route") {
@@ -2100,7 +3328,7 @@
         return {
           x,
           z,
-          height: core.heightAt(state.terrain, x, z, params()),
+          height: heightFromTeachingSnapshot(x, z),
         };
       }
 
@@ -2168,13 +3396,38 @@
         });
 
         contourCanvas.addEventListener("click", handleContourClick);
+        referenceCanvas.addEventListener("click", openReferenceLightbox);
+        byId("closeReferenceLightbox").addEventListener("click", closeReferenceLightbox);
+        referenceLightbox.addEventListener("click", function (event) {
+          if (event.target === referenceLightbox) closeReferenceLightbox();
+        });
+        document.addEventListener("keydown", function (event) {
+          if (event.key === "Escape" && !referenceLightbox.hidden) closeReferenceLightbox();
+        });
+
+        byId("toggleReferencePanel").addEventListener("click", function () {
+          setReferencePanelCollapsed(true);
+        });
+        byId("restoreReferencePanel").addEventListener("click", function () {
+          setReferencePanelCollapsed(false);
+        });
+        byId("toggleContourPanel").addEventListener("click", function () {
+          setContourPanelCollapsed(true);
+        });
+        byId("restoreContourPanel").addEventListener("click", function () {
+          setContourPanelCollapsed(false);
+        });
 
         byId("sliceButton").addEventListener("click", startSliceAnimation);
         byId("resetButton").addEventListener("click", resetView);
         byId("themeToggle").addEventListener("click", function () {
-          state.theme = state.theme === "exam" ? "geo" : "exam";
-          document.body.dataset.theme = state.theme;
-          byId("themeToggle").textContent = state.theme === "exam" ? "自然地理主题" : "高考教辅主题";
+          state.visualMode = state.visualMode === "natural" ? "clean" : "natural";
+          updateVisualModeButton();
+          updateScene();
+        });
+        byId("idealToggle").addEventListener("click", function () {
+          state.idealMode = !state.idealMode;
+          updateIdealModeButton();
           updateScene();
         });
 
@@ -2216,6 +3469,9 @@
       }
 
       renderTerrainButtons();
+      updateWorkspaceLayout();
+      updateVisualModeButton();
+      updateIdealModeButton();
       setMobilePanel(state.mobilePanel);
       bindEvents();
       initThree();

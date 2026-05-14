@@ -103,6 +103,14 @@
       proverb: "坝修窄口，库蓄宽肚",
     },
     {
+      id: "water_diversion",
+      mode: "application",
+      label: "引水线路",
+      card: "C5_water_diversion",
+      rule: "水源高、受水区低，线路沿等高线缓降并避开陡坡深谷",
+      proverb: "高水低引，沿线缓降",
+    },
+    {
       id: "road_route",
       mode: "application",
       label: "公路选线",
@@ -153,8 +161,7 @@
     return Object.assign({}, DEFAULT_PARAMS, overrides || {});
   }
 
-  function heightAt(type, x, z, overrides) {
-    const params = resolveParams(overrides);
+  function baseHeightAt(type, x, z, params) {
     const relief = params.relief;
     const softness = params.softness;
     let height;
@@ -248,6 +255,15 @@
         height = 260 + sideHills + upstreamRim + 110 * downstream - relief * (valleyFloor + pocketLow);
         break;
       }
+      case "water_diversion": {
+        const highSource = 145 * gaussian(x, z, -0.62, 0.58, 0.32, 0.28);
+        const receivingField = 95 * gaussian(x, z, 0.58, -0.44, 0.34, 0.3);
+        const valleyCut = 105 * Math.exp(-Math.pow(x + 0.05, 2) / 0.055) * Math.exp(-Math.pow(z - 0.04, 2) / 0.5);
+        const contourBench = 48 * Math.exp(-Math.pow(z + 0.12 + 0.26 * x, 2) / 0.035);
+        const regionalFall = 185 * ((z + 1) / 2) + 95 * ((1 - x) / 2);
+        height = 250 + regionalFall + relief * (highSource + contourBench - receivingField - valleyCut);
+        break;
+      }
       case "road_route": {
         const regionalSlope = 145 * ((z + 1) / 2);
         const ridgeBarrier = 230 * Math.exp(-Math.pow(x - 0.18, 2) / 0.05) * smoothstep(-0.2, 0.9, z);
@@ -277,12 +293,179 @@
     return clamp(height * params.verticalScale, 20, 1600);
   }
 
+  function edgeFade(x, z) {
+    return 1 - smoothstep(0.82, 1, Math.max(Math.abs(x), Math.abs(z)));
+  }
+
+  function terrainNoise(x, z, seed) {
+    const a = Math.sin((x * 12.9898 + z * 78.233 + seed * 19.19) * 1.07);
+    const b = Math.sin(x * 31.7 - z * 24.3 + seed * 3.11) * 0.55;
+    const c = Math.cos((x + z) * 17.9 + seed * 5.73) * 0.32;
+    const d = Math.sin((x - z) * 47.1 - seed * 1.37) * 0.16;
+    return (a + b + c + d) / 2.03;
+  }
+
+  function baseSlopeAt(type, x, z, params) {
+    const step = 0.018;
+    const leftX = clamp(x - step, -1, 1);
+    const rightX = clamp(x + step, -1, 1);
+    const downZ = clamp(z - step, -1, 1);
+    const upZ = clamp(z + step, -1, 1);
+    const dxDenom = rightX - leftX || step * 2;
+    const dzDenom = upZ - downZ || step * 2;
+    const dx = (baseHeightAt(type, rightX, z, params) - baseHeightAt(type, leftX, z, params)) / dxDenom;
+    const dz = (baseHeightAt(type, x, upZ, params) - baseHeightAt(type, x, downZ, params)) / dzDenom;
+    return Math.hypot(dx, dz);
+  }
+
+  function detailHeightAt(type, x, z, baseHeight, params) {
+    const fade = edgeFade(x, z);
+    if (fade <= 0 || params.detailScale === 0) return 0;
+
+    const slopeGate = clamp(baseSlopeAt(type, x, z, params) / 620, 0, 1);
+    const reliefGate = clamp(params.relief, 0.2, 1.4);
+    const r = Math.hypot(x, z);
+    const axisRidge = z - 0.28 * x;
+    const axisValley = z - 0.25 * x;
+    const baseNoise = terrainNoise(x, z, type.length + baseHeight * 0.001);
+    let shaped = baseNoise;
+    let amplitude = 10;
+
+    switch (type) {
+      case "peak":
+        amplitude = 18;
+        shaped = baseNoise * 0.55 + Math.sin(Math.atan2(z, x) * 9 + r * 18) * 0.32 * slopeGate;
+        break;
+      case "basin":
+        amplitude = 13;
+        shaped = Math.cos(r * 24) * 0.34 * (1 - slopeGate * 0.35);
+        break;
+      case "ridge":
+        amplitude = 16;
+        shaped = baseNoise * 0.5 + Math.sin(x * 22 + z * 5) * 0.32 * Math.exp(-(axisRidge * axisRidge) / 0.18);
+        break;
+      case "valley":
+        amplitude = 15;
+        shaped = baseNoise * 0.42 - Math.cos((x + z) * 18) * 0.28 * Math.exp(-(axisValley * axisValley) / 0.16);
+        break;
+      case "saddle":
+        amplitude = 15;
+        shaped = baseNoise * 0.48 + Math.sin((x * x - z * z) * 18) * 0.26;
+        break;
+      case "cliff":
+        amplitude = 22;
+        shaped = baseNoise * 0.38 + Math.sin(z * 30) * 0.42 * Math.exp(-x * x * 16);
+        break;
+      case "plain":
+        amplitude = 2.8;
+        shaped = baseNoise * 0.35;
+        break;
+      case "hills":
+        amplitude = 11;
+        shaped = baseNoise * 0.5 + Math.sin((x - z) * 16) * 0.22;
+        break;
+      case "mountain":
+        amplitude = 38;
+        shaped = baseNoise * 0.58 + Math.sin(x * 34 + z * 11) * 0.3 * slopeGate;
+        break;
+      case "plateau":
+        amplitude = 10;
+        shaped = baseNoise * 0.4 + Math.sin(r * 16) * 0.25 * smoothstep(0.48, 0.95, r);
+        break;
+      case "large_basin":
+        amplitude = 12;
+        shaped = baseNoise * 0.42 + Math.cos(r * 20) * 0.22;
+        break;
+      case "reservoir_site":
+        amplitude = 14;
+        shaped = baseNoise * 0.42 - Math.sin(z * 24) * 0.22 * Math.exp(-(x * x) / 0.22);
+        break;
+      case "water_diversion":
+        amplitude = 12;
+        shaped = baseNoise * 0.42 + Math.sin((z + 0.12 + 0.26 * x) * 34) * 0.18;
+        break;
+      case "road_route":
+        amplitude = 12;
+        shaped = baseNoise * 0.42 + Math.cos((z + 0.28 + 0.12 * Math.sin(x * Math.PI)) * 36) * 0.16;
+        break;
+      case "campsite_site":
+        amplitude = 12;
+        shaped = baseNoise * 0.4 + Math.sin((x + z) * 18) * 0.18;
+        break;
+      case "agriculture_layout":
+        amplitude = 8;
+        shaped = baseNoise * 0.35 + Math.sin(x * 13 - z * 9) * 0.12;
+        break;
+      default:
+        amplitude = 10;
+    }
+
+    const detailScale = typeof params.detailScale === "number" ? params.detailScale : 1;
+    const slopeMix = 0.35 + slopeGate * 0.65;
+    return shaped * amplitude * reliefGate * fade * slopeMix * detailScale;
+  }
+
+  function detailedHeightAt(type, x, z, params) {
+    const baseHeight = baseHeightAt(type, x, z, params);
+    const detailHeight = detailHeightAt(type, x, z, baseHeight, params);
+    return clamp(baseHeight + detailHeight, 20, 1600);
+  }
+
+  function terrainAt(type, x, z, overrides) {
+    const params = resolveParams(overrides);
+    const safeX = clamp(x, -1, 1);
+    const safeZ = clamp(z, -1, 1);
+    const baseHeight = baseHeightAt(type, safeX, safeZ, params);
+    const detailHeight = detailHeightAt(type, safeX, safeZ, baseHeight, params);
+    const height = clamp(baseHeight + detailHeight, 20, 1600);
+    const step = 0.012;
+    const leftX = clamp(safeX - step, -1, 1);
+    const rightX = clamp(safeX + step, -1, 1);
+    const downZ = clamp(safeZ - step, -1, 1);
+    const upZ = clamp(safeZ + step, -1, 1);
+    const dxDenom = rightX - leftX || step * 2;
+    const dzDenom = upZ - downZ || step * 2;
+    const dx = (detailedHeightAt(type, rightX, safeZ, params) - detailedHeightAt(type, leftX, safeZ, params)) / dxDenom;
+    const dz = (detailedHeightAt(type, safeX, upZ, params) - detailedHeightAt(type, safeX, downZ, params)) / dzDenom;
+    const slope = Math.hypot(dx, dz);
+    const normalScale = 650;
+    const nx = -dx / normalScale;
+    const ny = 1;
+    const nz = -dz / normalScale;
+    const nLen = Math.hypot(nx, ny, nz) || 1;
+    const roughness = clamp(0.24 + Math.abs(detailHeight) / 55 + clamp(slope / 900, 0, 0.55), 0, 1);
+
+    return {
+      height,
+      baseHeight,
+      detailHeight: height - baseHeight,
+      slope,
+      aspect: Math.atan2(dz, dx),
+      roughness,
+      normal: {
+        x: nx / nLen,
+        y: ny / nLen,
+        z: nz / nLen,
+      },
+    };
+  }
+
+  function heightAt(type, x, z, overrides) {
+    return terrainAt(type, x, z, overrides).height;
+  }
+
   function sampleGrid(type, size, overrides) {
     if (!Number.isInteger(size) || size < 2) {
       throw new Error("sampleGrid size must be an integer greater than 1");
     }
 
     const values = [];
+    const baseValues = [];
+    const detailValues = [];
+    const slopeValues = [];
+    const aspectValues = [];
+    const roughnessValues = [];
+    const normalValues = [];
     let min = Infinity;
     let max = -Infinity;
 
@@ -290,14 +473,47 @@
       const z = -1 + (2 * row) / (size - 1);
       for (let col = 0; col < size; col += 1) {
         const x = -1 + (2 * col) / (size - 1);
-        const value = heightAt(type, x, z, overrides);
+        const terrain = terrainAt(type, x, z, overrides);
+        const value = terrain.height;
         values.push(value);
+        baseValues.push(terrain.baseHeight);
+        detailValues.push(terrain.detailHeight);
+        slopeValues.push(terrain.slope);
+        aspectValues.push(terrain.aspect);
+        roughnessValues.push(terrain.roughness);
+        normalValues.push(terrain.normal.x, terrain.normal.y, terrain.normal.z);
         min = Math.min(min, value);
         max = Math.max(max, value);
       }
     }
 
-    return { type, size, min, max, values };
+    return {
+      type,
+      size,
+      min,
+      max,
+      values,
+      baseValues,
+      detailValues,
+      slopeValues,
+      aspectValues,
+      roughnessValues,
+      normalValues,
+    };
+  }
+
+  function sampleTeachingGrid(type, size, overrides) {
+    return sampleGrid(type, size, Object.assign({}, overrides || {}, { detailScale: 0 }));
+  }
+
+  function sampleRenderGrid(type, size, overrides) {
+    const params = Object.assign({}, overrides || {});
+    const renderDetailScale = typeof params.renderDetailScale === "number" ? params.renderDetailScale : 1.55;
+    delete params.renderDetailScale;
+    params.detailScale = typeof params.detailScale === "number"
+      ? Math.max(params.detailScale, renderDetailScale)
+      : renderDetailScale;
+    return sampleGrid(type, size, params);
   }
 
   function valueAt(grid, col, row) {
@@ -351,6 +567,80 @@
     }
 
     return segments;
+  }
+
+  function pointKey(point) {
+    return `${point.x.toFixed(5)},${point.z.toFixed(5)}`;
+  }
+
+  function segmentLength(a, b) {
+    return Math.hypot(a.x - b.x, a.z - b.z);
+  }
+
+  function contourPolylines(grid, level) {
+    const segments = contourSegments(grid, level).map((segment) => ({
+      a: { x: segment[0], z: segment[1] },
+      b: { x: segment[2], z: segment[3] },
+      used: false,
+    }));
+    const endpointMap = new Map();
+
+    segments.forEach((segment, index) => {
+      for (const point of [segment.a, segment.b]) {
+        const key = pointKey(point);
+        if (!endpointMap.has(key)) endpointMap.set(key, []);
+        endpointMap.get(key).push(index);
+      }
+    });
+
+    function nextUnused(key) {
+      const candidates = endpointMap.get(key) || [];
+      return candidates.find((index) => !segments[index].used);
+    }
+
+    function extend(points, append) {
+      while (points.length) {
+        const edgePoint = append ? points[points.length - 1] : points[0];
+        const key = pointKey(edgePoint);
+        const index = nextUnused(key);
+        if (index === undefined) return;
+        const segment = segments[index];
+        segment.used = true;
+        const aKey = pointKey(segment.a);
+        const bKey = pointKey(segment.b);
+        const nextPoint = aKey === key ? segment.b : bKey === key ? segment.a : null;
+        if (!nextPoint) return;
+        if (append) {
+          points.push(nextPoint);
+        } else {
+          points.unshift(nextPoint);
+        }
+      }
+    }
+
+    const polylines = [];
+    for (let index = 0; index < segments.length; index += 1) {
+      const segment = segments[index];
+      if (segment.used) continue;
+      segment.used = true;
+      const points = [segment.a, segment.b];
+      extend(points, true);
+      extend(points, false);
+
+      let length = 0;
+      for (let pointIndex = 1; pointIndex < points.length; pointIndex += 1) {
+        length += segmentLength(points[pointIndex - 1], points[pointIndex]);
+      }
+
+      polylines.push({
+        level,
+        points,
+        closed: points.length > 2 && pointKey(points[0]) === pointKey(points[points.length - 1]),
+        length,
+      });
+    }
+
+    return polylines;
   }
 
   function contourLevels(min, max, interval) {
@@ -448,12 +738,16 @@
   return {
     TERRAIN_TYPES,
     contourLevels,
+    contourPolylines,
     contourSegments,
     flowField,
     flowVector,
     heightAt,
     lineOfSight,
     profileSamples,
+    sampleRenderGrid,
     sampleGrid,
+    sampleTeachingGrid,
+    terrainAt,
   };
 });

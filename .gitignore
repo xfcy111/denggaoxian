@@ -1,0 +1,5 @@
+verification/
+stepmd/
+*.pdf
+node_modules/
+*.log

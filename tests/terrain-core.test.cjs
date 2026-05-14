@@ -27,6 +27,7 @@ test("terrain library exposes A, B, and C teaching mode landform types", () => {
     "plateau",
     "large_basin",
     "reservoir_site",
+    "water_diversion",
     "road_route",
     "campsite_site",
     "agriculture_layout",
@@ -67,6 +68,79 @@ test("sampleGrid uses one geometry source and reports normalized values", () => 
   assert.ok(grid.values.every((value) => Number.isFinite(value)));
 });
 
+test("terrainAt exposes deterministic same-source terrain detail metadata", () => {
+  const first = core.terrainAt("mountain", 0.18, -0.27);
+  const second = core.terrainAt("mountain", 0.18, -0.27);
+
+  assert.deepEqual(first, second);
+  assert.equal(core.heightAt("mountain", 0.18, -0.27), first.height);
+  assert.ok(Math.abs(first.detailHeight) > 0.1);
+  assert.ok(Math.abs(first.detailHeight) < 70);
+  assert.equal(first.height, first.baseHeight + first.detailHeight);
+  assert.ok(Number.isFinite(first.slope));
+  assert.ok(Number.isFinite(first.aspect));
+  assert.ok(first.roughness >= 0 && first.roughness <= 1);
+  assert.ok(Number.isFinite(first.normal.x));
+  assert.ok(Number.isFinite(first.normal.y));
+  assert.ok(Number.isFinite(first.normal.z));
+});
+
+test("terrainAt can disable detail for idealized same-source contours", () => {
+  const ideal = core.terrainAt("mountain", 0.18, -0.27, { detailScale: 0 });
+  const natural = core.terrainAt("mountain", 0.18, -0.27, { detailScale: 1 });
+
+  assert.equal(ideal.detailHeight, 0);
+  assert.equal(ideal.height, ideal.baseHeight);
+  assert.notEqual(natural.height, ideal.height);
+});
+
+test("sampleTeachingGrid returns a smooth deterministic classroom height field", () => {
+  const teaching = core.sampleTeachingGrid("mountain", 19);
+  const direct = core.sampleGrid("mountain", 19, { detailScale: 0 });
+
+  assert.equal(teaching.size, 19);
+  assert.deepEqual(teaching.values, direct.values);
+  assert.ok(teaching.detailValues.every((value) => value === 0));
+  assert.ok(teaching.values.every((value) => Number.isFinite(value)));
+});
+
+test("sampleRenderGrid returns deterministic local-realism terrain metadata", () => {
+  const teaching = core.sampleTeachingGrid("mountain", 19);
+  const render = core.sampleRenderGrid("mountain", 19);
+  const repeat = core.sampleRenderGrid("mountain", 19);
+  const count = render.size * render.size;
+  const totalDelta = render.values.reduce((total, value, index) => total + Math.abs(value - teaching.values[index]), 0);
+
+  assert.deepEqual(render, repeat);
+  assert.equal(render.size, 19);
+  assert.equal(render.values.length, count);
+  assert.equal(render.slopeValues.length, count);
+  assert.equal(render.aspectValues.length, count);
+  assert.equal(render.normalValues.length, count * 3);
+  assert.equal(render.roughnessValues.length, count);
+  assert.ok(totalDelta > 300);
+  assert.ok(render.detailValues.some((value) => Math.abs(value) > 5));
+  assert.ok(render.slopeValues.every((value) => Number.isFinite(value) && value >= 0));
+  assert.ok(render.roughnessValues.every((value) => value >= 0 && value <= 1));
+});
+
+test("sampleGrid carries the same detail, slope, normal, and roughness data used by renderers", () => {
+  const grid = core.sampleGrid("ridge", 19);
+  const count = grid.size * grid.size;
+  const mid = Math.floor(count / 2);
+
+  assert.equal(grid.baseValues.length, count);
+  assert.equal(grid.detailValues.length, count);
+  assert.equal(grid.slopeValues.length, count);
+  assert.equal(grid.aspectValues.length, count);
+  assert.equal(grid.roughnessValues.length, count);
+  assert.equal(grid.normalValues.length, count * 3);
+  assert.ok(grid.detailValues.some((value) => Math.abs(value) > 0.1));
+  assert.equal(grid.values[mid], grid.baseValues[mid] + grid.detailValues[mid]);
+  assert.ok(grid.slopeValues.every((value) => Number.isFinite(value) && value >= 0));
+  assert.ok(grid.roughnessValues.every((value) => value >= 0 && value <= 1));
+});
+
 test("contourSegments returns drawable marching-squares line segments", () => {
   const grid = core.sampleGrid("peak", 49);
   const segments = core.contourSegments(grid, 400);
@@ -74,6 +148,26 @@ test("contourSegments returns drawable marching-squares line segments", () => {
   for (const segment of segments.slice(0, 8)) {
     assert.equal(segment.length, 4);
     assert.ok(segment.every((value) => value >= -1 && value <= 1));
+  }
+});
+
+test("contourPolylines joins marching-squares segments without changing the contour source", () => {
+  const grid = core.sampleGrid("peak", 49);
+  const level = 400;
+  const segments = core.contourSegments(grid, level);
+  const polylines = core.contourPolylines(grid, level);
+  const polylineSegmentCount = polylines.reduce((total, line) => total + Math.max(0, line.points.length - 1), 0);
+
+  assert.ok(polylines.length > 0);
+  assert.equal(polylineSegmentCount, segments.length);
+  for (const line of polylines) {
+    assert.equal(line.level, level);
+    assert.ok(line.length > 0);
+    assert.ok(line.points.length >= 2);
+    for (const point of line.points) {
+      assert.ok(point.x >= -1 && point.x <= 1);
+      assert.ok(point.z >= -1 && point.z <= 1);
+    }
   }
 });
 
@@ -172,15 +266,21 @@ test("large basin and reservoir site preserve application teaching logic", () =>
   assert.ok(h("reservoir_site", 0.1, 0) < h("reservoir_site", 0.1, 0.8));
 });
 
-test("stage 8 application scenarios encode route, campsite, and agriculture logic", () => {
+test("stage 8 application scenarios encode route, water diversion, campsite, and agriculture logic", () => {
   const roadStart = h("road_route", -0.75, -0.4);
   const roadEnd = h("road_route", 0.75, -0.12);
+  const diversionSource = h("water_diversion", -0.62, 0.58);
+  const diversionTarget = h("water_diversion", 0.58, -0.44);
+  const diversionRouteA = h("water_diversion", -0.35, 0.32);
+  const diversionRouteB = h("water_diversion", 0.28, -0.08);
   const campBench = h("campsite_site", 0.36, -0.3);
   const valleyFloor = h("campsite_site", 0, 0.45);
   const field = h("agriculture_layout", -0.45, -0.35);
   const hill = h("agriculture_layout", 0.72, 0.58);
 
   assert.ok(Math.abs(roadStart - roadEnd) < 130);
+  assert.ok(diversionSource > diversionTarget + 140);
+  assert.ok(Math.abs(diversionRouteA - diversionRouteB) < 170);
   assert.ok(campBench > valleyFloor + 80);
   assert.ok(field < 260);
   assert.ok(hill > field + 120);
