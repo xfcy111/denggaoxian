@@ -227,17 +227,20 @@ test("contour.html exposes browser-safe online data extension points and embedde
   assert.match(html, /PUBLIC_CORS_ONLY/);
 });
 
-test("contour.html previews embedded reference cards through the lightbox canvas", () => {
+test("contour.html loads high-resolution reference cards from GitHub CDN with canvas fallback", () => {
   const html = fs.readFileSync(htmlPath, "utf8");
-  assert.match(html, /function shouldUseReferenceCanvasLightbox/);
+  assert.match(html, /RAW_REFERENCE_CDN_BASES/);
+  assert.match(html, /cdn\.jsdelivr\.net\/gh\/xfcy111\/denggaoxian@main\/images\/gpt-raw\//);
+  assert.match(html, /raw\.githubusercontent\.com\/xfcy111\/denggaoxian\/main\/images\/gpt-raw\//);
+  assert.match(html, /function rawReferenceUrlsFor/);
+  assert.match(html, /function loadReferenceLightboxImage/);
   assert.match(html, /function referenceStatusText/);
-  assert.match(html, /内嵌参考图已加载/);
+  assert.match(html, /GitHub 高清原图/);
   assert.match(html, /\.lightbox-title\s*\{[^}]*min-width:\s*0/s);
   assert.match(html, /\.lightbox-title span\s*\{[^}]*text-overflow:\s*ellipsis/s);
-  assert.match(html, /const useCanvasPreview = shouldUseReferenceCanvasLightbox\(meta\)/);
   assert.match(html, /byId\("referenceLightboxStatus"\)\.textContent = referenceStatusText\(meta\)/);
   assert.match(html, /ctx\.drawImage\(referenceCanvas,\s*0,\s*0,\s*referenceLightboxCanvas\.width,\s*referenceLightboxCanvas\.height\)/);
-  assert.doesNotMatch(html, /referenceLightboxImage\.src = referenceAssetFor\(meta\.card\) \|\| state\.referencePath/);
+  assert.match(html, /loadReferenceLightboxImage\(rawReferenceUrlsFor\(meta\.card\),\s*meta\)/);
 });
 
 test("contour.html exposes solid terrain blocks and thick contour ribbons", () => {

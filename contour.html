@@ -984,6 +984,24 @@
       const APPLICATION_CARD_ORDER = ["C1_reservoir_site", "C5_water_diversion", "C2_road_route", "C3_campsite_site", "C4_agriculture_layout"];
       const embeddedReferenceAssets = window.DENGGAOXIAN_EMBEDDED_ASSETS || {};
       const LOCAL_REFERENCE_BASE = ["images", "processed"].join("/") + "/";
+      const RAW_REFERENCE_CARDS = new Set([
+        "A1_peak",
+        "A2_basin",
+        "A3_ridge",
+        "A4_valley",
+        "A5_saddle",
+        "A6_cliff",
+        "B1_plain",
+        "B2_hills",
+        "B3_mountain",
+        "B4_plateau",
+        "B5_large_basin",
+        "C1_reservoir_site",
+      ]);
+      const RAW_REFERENCE_CDN_BASES = Object.freeze([
+        "https://cdn.jsdelivr.net/gh/xfcy111/denggaoxian@main/images/gpt-raw/",
+        "https://raw.githubusercontent.com/xfcy111/denggaoxian/main/images/gpt-raw/",
+      ]);
       const MAPLIBRE_JS_URL = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js";
       const MAPLIBRE_CSS_URL = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css";
       const MAPLIBRE_ASSET_TIMEOUT = 5000;
@@ -1164,11 +1182,19 @@
         return referenceAssetFor(card) || `${LOCAL_REFERENCE_BASE}${card}.webp`;
       }
 
-      function shouldUseReferenceCanvasLightbox(meta) {
-        return Boolean(referenceAssetFor(meta.card));
+      function rawReferenceFileFor(card) {
+        return `${card}_raw.png`;
       }
 
-      function referenceStatusText(meta) {
+      function rawReferenceUrlsFor(card) {
+        if (!RAW_REFERENCE_CARDS.has(card)) return [];
+        return RAW_REFERENCE_CDN_BASES.map((base) => `${base}${rawReferenceFileFor(card)}`);
+      }
+
+      function referenceStatusText(meta, status) {
+        if (status === "raw-loading") return `${rawReferenceFileFor(meta.card)} 正在加载 GitHub 高清原图。`;
+        if (status === "raw-loaded") return `${rawReferenceFileFor(meta.card)} GitHub 高清原图已加载。`;
+        if (status === "raw-failed") return `${rawReferenceFileFor(meta.card)} 高清原图不可用，显示内嵌参考图。`;
         const embeddedAsset = referenceAssetFor(meta.card);
         if (state.referenceLoaded && embeddedAsset) return `${meta.card}.webp 内嵌参考图已加载。`;
         if (state.referenceLoaded) return `${state.referencePath} 已加载。`;
@@ -1184,6 +1210,45 @@
         referenceLightboxCanvas.height = 1200;
         ctx.clearRect(0, 0, referenceLightboxCanvas.width, referenceLightboxCanvas.height);
         ctx.drawImage(referenceCanvas, 0, 0, referenceLightboxCanvas.width, referenceLightboxCanvas.height);
+      }
+
+      function loadReferenceLightboxImage(urls, meta) {
+        const queue = urls.slice();
+
+        function fallbackToCanvas() {
+          referenceLightboxImage.onload = null;
+          referenceLightboxImage.onerror = null;
+          referenceLightboxImage.removeAttribute("src");
+          drawReferenceCanvasLightbox();
+          byId("referenceLightboxStatus").textContent = referenceStatusText(meta, "raw-failed");
+        }
+
+        function tryNext() {
+          const url = queue.shift();
+          if (!url) {
+            fallbackToCanvas();
+            return;
+          }
+
+          byId("referenceLightboxStatus").textContent = referenceStatusText(meta, "raw-loading");
+          referenceLightboxImage.hidden = true;
+          referenceLightboxImage.onload = function () {
+            if (currentMeta().card !== meta.card) return;
+            referenceLightboxImage.onload = null;
+            referenceLightboxImage.onerror = null;
+            referenceLightboxCanvas.hidden = true;
+            referenceLightboxImage.hidden = false;
+            byId("referenceLightboxStatus").textContent = referenceStatusText(meta, "raw-loaded");
+          };
+          referenceLightboxImage.onerror = function () {
+            referenceLightboxImage.onload = null;
+            referenceLightboxImage.onerror = null;
+            tryNext();
+          };
+          referenceLightboxImage.src = url;
+        }
+
+        tryNext();
       }
 
       function currentSightResult() {
@@ -1622,20 +1687,13 @@
 
       function openReferenceLightbox() {
         const meta = currentMeta();
-        const useCanvasPreview = shouldUseReferenceCanvasLightbox(meta);
         byId("referenceLightboxTitle").textContent = `${meta.card.replace("_", " ")} · ${meta.label}`;
         byId("referenceLightboxStatus").textContent = referenceStatusText(meta);
-
-        if (state.referenceLoaded && !useCanvasPreview) {
-          referenceLightboxImage.src = state.referencePath;
-          referenceLightboxImage.hidden = false;
-          referenceLightboxCanvas.hidden = true;
-        } else {
-          drawReferenceCanvasLightbox();
-        }
+        drawReferenceCanvasLightbox();
 
         referenceLightbox.hidden = false;
         byId("closeReferenceLightbox").focus();
+        loadReferenceLightboxImage(rawReferenceUrlsFor(meta.card), meta);
       }
 
       function closeReferenceLightbox() {
