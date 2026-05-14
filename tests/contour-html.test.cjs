@@ -227,6 +227,19 @@ test("contour.html exposes browser-safe online data extension points and embedde
   assert.match(html, /PUBLIC_CORS_ONLY/);
 });
 
+test("contour.html previews embedded reference cards through the lightbox canvas", () => {
+  const html = fs.readFileSync(htmlPath, "utf8");
+  assert.match(html, /function shouldUseReferenceCanvasLightbox/);
+  assert.match(html, /function referenceStatusText/);
+  assert.match(html, /内嵌参考图已加载/);
+  assert.match(html, /\.lightbox-title\s*\{[^}]*min-width:\s*0/s);
+  assert.match(html, /\.lightbox-title span\s*\{[^}]*text-overflow:\s*ellipsis/s);
+  assert.match(html, /const useCanvasPreview = shouldUseReferenceCanvasLightbox\(meta\)/);
+  assert.match(html, /byId\("referenceLightboxStatus"\)\.textContent = referenceStatusText\(meta\)/);
+  assert.match(html, /ctx\.drawImage\(referenceCanvas,\s*0,\s*0,\s*referenceLightboxCanvas\.width,\s*referenceLightboxCanvas\.height\)/);
+  assert.doesNotMatch(html, /referenceLightboxImage\.src = referenceAssetFor\(meta\.card\) \|\| state\.referencePath/);
+});
+
 test("contour.html exposes solid terrain blocks and thick contour ribbons", () => {
   const html = fs.readFileSync(htmlPath, "utf8");
   assert.match(html, /const terrainBaseY/);

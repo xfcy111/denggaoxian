@@ -29,6 +29,12 @@ test("build-single-html emits a self-contained classroom page with online terrai
   assert.match(html, /ContourTerrain/);
   assert.match(html, /ONLINE_DATA_SOURCES/);
   assert.match(html, /https:\/\/unpkg\.com\/maplibre-gl@5\.24\.0/);
+  assert.match(html, /function shouldUseReferenceCanvasLightbox/);
+  assert.match(html, /function referenceStatusText/);
+  assert.match(html, /内嵌参考图已加载/);
+  assert.match(html, /const useCanvasPreview = shouldUseReferenceCanvasLightbox\(meta\)/);
+  assert.match(html, /byId\("referenceLightboxStatus"\)\.textContent = referenceStatusText\(meta\)/);
+  assert.doesNotMatch(html, /referenceLightboxImage\.src = referenceAssetFor\(meta\.card\) \|\| state\.referencePath/);
   assert.doesNotMatch(html, /<script src="terrain-core\.js/);
   assert.doesNotMatch(html, /images\/processed\//);
 });

@@ -657,6 +657,7 @@
     .lightbox-title {
       display: grid;
       gap: 2px;
+      min-width: 0;
     }
 
     .lightbox-title strong {
@@ -666,9 +667,14 @@
     .lightbox-title span {
       color: rgba(255, 250, 240, 0.72);
       font-size: 12px;
+      max-width: min(72vw, 860px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .lightbox-close {
+      flex: 0 0 auto;
       min-height: 34px;
       padding: 6px 13px;
       background: #fffaf0;
@@ -1158,6 +1164,28 @@
         return referenceAssetFor(card) || `${LOCAL_REFERENCE_BASE}${card}.webp`;
       }
 
+      function shouldUseReferenceCanvasLightbox(meta) {
+        return Boolean(referenceAssetFor(meta.card));
+      }
+
+      function referenceStatusText(meta) {
+        const embeddedAsset = referenceAssetFor(meta.card);
+        if (state.referenceLoaded && embeddedAsset) return `${meta.card}.webp 内嵌参考图已加载。`;
+        if (state.referenceLoaded) return `${state.referencePath} 已加载。`;
+        if (embeddedAsset) return `${meta.card}.webp 内嵌参考图正在生成预览。`;
+        return `${state.referencePath} 暂未生成，显示解析函数临时卡。`;
+      }
+
+      function drawReferenceCanvasLightbox() {
+        referenceLightboxImage.hidden = true;
+        referenceLightboxCanvas.hidden = false;
+        const ctx = referenceLightboxCanvas.getContext("2d");
+        referenceLightboxCanvas.width = 1200;
+        referenceLightboxCanvas.height = 1200;
+        ctx.clearRect(0, 0, referenceLightboxCanvas.width, referenceLightboxCanvas.height);
+        ctx.drawImage(referenceCanvas, 0, 0, referenceLightboxCanvas.width, referenceLightboxCanvas.height);
+      }
+
       function currentSightResult() {
         if (!state.profileStart || !state.profileEnd) return null;
         return lineOfSightFromTeachingSnapshot(state.profileStart, state.profileEnd, 100);
@@ -1594,23 +1622,16 @@
 
       function openReferenceLightbox() {
         const meta = currentMeta();
+        const useCanvasPreview = shouldUseReferenceCanvasLightbox(meta);
         byId("referenceLightboxTitle").textContent = `${meta.card.replace("_", " ")} · ${meta.label}`;
-        byId("referenceLightboxStatus").textContent = state.referenceLoaded
-          ? `${state.referencePath} 已加载。`
-          : `${state.referencePath} 暂未生成，显示解析函数临时卡。`;
+        byId("referenceLightboxStatus").textContent = referenceStatusText(meta);
 
-        if (state.referenceLoaded) {
-          referenceLightboxImage.src = referenceAssetFor(meta.card) || state.referencePath;
+        if (state.referenceLoaded && !useCanvasPreview) {
+          referenceLightboxImage.src = state.referencePath;
           referenceLightboxImage.hidden = false;
           referenceLightboxCanvas.hidden = true;
         } else {
-          referenceLightboxImage.hidden = true;
-          referenceLightboxCanvas.hidden = false;
-          const ctx = referenceLightboxCanvas.getContext("2d");
-          referenceLightboxCanvas.width = 1200;
-          referenceLightboxCanvas.height = 1200;
-          ctx.clearRect(0, 0, referenceLightboxCanvas.width, referenceLightboxCanvas.height);
-          ctx.drawImage(referenceCanvas, 0, 0, referenceLightboxCanvas.width, referenceLightboxCanvas.height);
+          drawReferenceCanvasLightbox();
         }
 
         referenceLightbox.hidden = false;
