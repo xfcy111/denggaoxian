@@ -208,6 +208,28 @@ test("contour.html wires MapLibre online terrain priority with local fallback", 
   assert.match(html, /demotiles\.maplibre\.org\/terrain-tiles\/tiles\.json/);
 });
 
+test("contour.html lets teachers add a local MapTiler key before slice tracing", () => {
+  const html = fs.readFileSync(htmlPath, "utf8");
+  assert.match(html, /id="maptilerKeyButton"[\s\S]*id="sliceButton"/);
+  assert.match(html, /id="maptilerKeyDialog"/);
+  assert.match(html, /id="maptilerKeyInput"/);
+  assert.match(html, /DENGGAOXIAN_MAPTILER_KEY/);
+  assert.match(html, /openMapTilerKeyDialog/);
+  assert.match(html, /saveMapTilerKey/);
+  assert.match(html, /clearMapTilerKey/);
+});
+
+test("contour.html wires MapTiler outdoor-v2 terrain-rgb-v2 ahead of public fallback", () => {
+  const html = fs.readFileSync(htmlPath, "utf8");
+  assert.match(html, /MAPTILER_TERRAIN_TILEJSON/);
+  assert.match(html, /tiles\/terrain-rgb-v2\/tiles\.json\?key=/);
+  assert.match(html, /maps\/outdoor-v2\/style\.json\?key=/);
+  assert.match(html, /maptilerSourceForKey/);
+  assert.match(html, /onlineTerrainSources/);
+  assert.match(html, /MapTiler outdoor-v2 \+ terrain-rgb-v2/);
+  assert.match(html, /fallbackToLocalRealTerrain/);
+});
+
 test("contour.html keeps teaching tools on the teaching snapshot in real detail mode", () => {
   const html = fs.readFileSync(htmlPath, "utf8");
   assert.match(html, /function ensureTeachingSnapshot/);

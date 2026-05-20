@@ -32,6 +32,9 @@ test("build-single-html emits a self-contained classroom page with online terrai
   assert.match(html, /RAW_REFERENCE_CDN_BASES/);
   assert.match(html, /cdn\.jsdelivr\.net\/gh\/xfcy111\/denggaoxian@main\/images\/gpt-raw\//);
   assert.match(html, /raw\.githubusercontent\.com\/xfcy111\/denggaoxian\/main\/images\/gpt-raw\//);
+  assert.match(html, /id="maptilerKeyButton"/);
+  assert.match(html, /tiles\/terrain-rgb-v2\/tiles\.json\?key=/);
+  assert.match(html, /maps\/outdoor-v2\/style\.json\?key=/);
   assert.match(html, /function rawReferenceUrlsFor/);
   assert.match(html, /function loadReferenceLightboxImage/);
   assert.match(html, /function referenceStatusText/);

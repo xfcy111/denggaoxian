@@ -157,6 +157,13 @@
       color: #fff;
     }
 
+    .utility-button.has-maptiler-key {
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 14%, var(--paper));
+      color: var(--accent);
+      font-weight: 800;
+    }
+
     .mobile-tabs {
       display: none;
       padding: 10px 14px 0;
@@ -701,6 +708,119 @@
       display: block;
     }
 
+    .maptiler-key-dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(14, 18, 16, 0.68);
+      backdrop-filter: blur(10px);
+    }
+
+    .maptiler-key-dialog[hidden] {
+      display: none;
+    }
+
+    .maptiler-key-card {
+      width: min(520px, 100%);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      color: var(--ink);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+      padding: 18px;
+    }
+
+    .maptiler-key-header,
+    .maptiler-key-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .maptiler-key-header h2 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+    }
+
+    .maptiler-key-close {
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--paper) 92%, transparent);
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .maptiler-key-status {
+      margin: 14px 0;
+      padding: 8px 10px;
+      border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--line));
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--accent) 8%, var(--paper));
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .maptiler-key-field {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 14px;
+      font-weight: 800;
+    }
+
+    .maptiler-key-field input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--paper) 94%, #fff);
+      color: var(--ink);
+      padding: 8px 10px;
+      outline: none;
+    }
+
+    .maptiler-key-field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+
+    .maptiler-key-help {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .maptiler-key-actions {
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .maptiler-key-action {
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--paper) 92%, transparent);
+      color: var(--ink);
+      padding: 7px 12px;
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .maptiler-key-action.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
     @media (max-width: 1080px) {
       body {
         overflow: auto;
@@ -830,6 +950,7 @@
       </nav>
 
       <div class="utility-actions">
+        <button class="utility-button" type="button" id="maptilerKeyButton" aria-haspopup="dialog">DEM</button>
         <button class="utility-button" type="button" id="sliceButton">切面溯源</button>
         <button class="utility-button" type="button" id="resetButton">复位视角</button>
         <button class="utility-button" type="button" id="themeToggle" aria-pressed="true">自然写实</button>
@@ -942,6 +1063,25 @@
     </footer>
   </main>
 
+  <section class="maptiler-key-dialog" id="maptilerKeyDialog" role="dialog" aria-modal="true" aria-labelledby="maptilerKeyTitle" hidden>
+    <div class="maptiler-key-card">
+      <div class="maptiler-key-header">
+        <h2 id="maptilerKeyTitle">DEM 增强设置</h2>
+        <button class="maptiler-key-close" type="button" id="closeMapTilerKeyDialog" aria-label="关闭">x</button>
+      </div>
+      <p class="maptiler-key-status" id="maptilerKeyStatus" role="status">当前：未配置 MapTiler key。</p>
+      <label class="maptiler-key-field" for="maptilerKeyInput">
+        <span>MapTiler key</span>
+        <input id="maptilerKeyInput" type="password" autocomplete="off" spellcheck="false">
+      </label>
+      <p class="maptiler-key-help">保存后，真实细节会优先切换到 MapTiler outdoor-v2 + terrain-rgb-v2；key 只保存在本机 localStorage，失效或加载失败时自动回退。</p>
+      <div class="maptiler-key-actions">
+        <button class="maptiler-key-action" type="button" id="clearMapTilerKey">清除 key</button>
+        <button class="maptiler-key-action primary" type="button" id="saveMapTilerKey">保存并应用</button>
+      </div>
+    </div>
+  </section>
+
   <section class="reference-lightbox" id="referenceLightbox" role="dialog" aria-modal="true" aria-labelledby="referenceLightboxTitle" hidden>
     <div class="lightbox-bar">
       <div class="lightbox-title">
@@ -981,6 +1121,8 @@
       const referenceLightbox = document.getElementById("referenceLightbox");
       const referenceLightboxImage = document.getElementById("referenceLightboxImage");
       const referenceLightboxCanvas = document.getElementById("referenceLightboxCanvas");
+      const mapTilerKeyDialog = document.getElementById("maptilerKeyDialog");
+      const mapTilerKeyInput = document.getElementById("maptilerKeyInput");
       const APPLICATION_CARD_ORDER = ["C1_reservoir_site", "C5_water_diversion", "C2_road_route", "C3_campsite_site", "C4_agriculture_layout"];
       const embeddedReferenceAssets = window.DENGGAOXIAN_EMBEDDED_ASSETS || {};
       const LOCAL_REFERENCE_BASE = ["images", "processed"].join("/") + "/";
@@ -1006,6 +1148,9 @@
       const MAPLIBRE_CSS_URL = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css";
       const MAPLIBRE_ASSET_TIMEOUT = 5000;
       const ONLINE_TERRAIN_TIMEOUT = 8000;
+      const MAPTILER_KEY_STORAGE = "DENGGAOXIAN_MAPTILER_KEY";
+      const MAPTILER_OUTDOOR_STYLE_URL = "https://api.maptiler.com/maps/outdoor-v2/style.json?key=";
+      const MAPTILER_TERRAIN_TILEJSON = "https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key=";
       const PUBLIC_CORS_ONLY = "PUBLIC_CORS_ONLY";
       const REAL_TERRAIN_DEM_SOURCES = [
         {
@@ -1093,6 +1238,7 @@
         idealMode: true,
         realTerrainStatus: "idle",
         realTerrainMessage: "教学同源模型",
+        mapTilerKey: readMapTilerKey(),
         relief: 1,
         verticalScale: 1,
         interval: 100,
@@ -1137,12 +1283,62 @@
       let mapLibreAssetsPromise = null;
       let realTerrainMapInstance = null;
       let realTerrainLoadToken = 0;
+      let realTerrainSourceId = "terrain";
       const gridSize = 181;
       const terrainBaseY = -0.92;
       let lastTerrainGridSize = gridSize;
 
       function byId(id) {
         return document.getElementById(id);
+      }
+
+      function sanitizeMapTilerKey(value) {
+        return String(value || "").trim();
+      }
+
+      function readMapTilerKey() {
+        try {
+          return sanitizeMapTilerKey(window.localStorage.getItem(MAPTILER_KEY_STORAGE));
+        } catch (error) {
+          return "";
+        }
+      }
+
+      function writeMapTilerKey(key) {
+        try {
+          if (key) window.localStorage.setItem(MAPTILER_KEY_STORAGE, key);
+          else window.localStorage.removeItem(MAPTILER_KEY_STORAGE);
+        } catch (error) {
+          console.warn("MapTiler key could not be saved locally", error);
+        }
+      }
+
+      function mapTilerUrl(base, key) {
+        return `${base}${encodeURIComponent(sanitizeMapTilerKey(key))}`;
+      }
+
+      function maptilerSourceForKey(key) {
+        const safeKey = sanitizeMapTilerKey(key);
+        if (!safeKey) return null;
+        return {
+          id: "maptiler",
+          label: "MapTiler outdoor-v2 + terrain-rgb-v2",
+          styleUrl: mapTilerUrl(MAPTILER_OUTDOOR_STYLE_URL, safeKey),
+          url: mapTilerUrl(MAPTILER_TERRAIN_TILEJSON, safeKey),
+          tileSize: 512,
+          encoding: "mapbox",
+          sourceId: "maptiler-terrain",
+          usesPrivateKey: true,
+        };
+      }
+
+      function onlineTerrainSources() {
+        const mapTilerSource = maptilerSourceForKey(state.mapTilerKey);
+        return mapTilerSource ? [mapTilerSource].concat(REAL_TERRAIN_DEM_SOURCES) : REAL_TERRAIN_DEM_SOURCES;
+      }
+
+      function terrainSourceId(source) {
+        return source.sourceId || "terrain";
       }
 
       function baseParams() {
@@ -1404,6 +1600,67 @@
           : "真实细节：优先加载在线真实地形；不可用时显示本地真实细节，右侧卷面图保持教学清晰。";
       }
 
+      function updateMapTilerKeyButton() {
+        const button = byId("maptilerKeyButton");
+        if (!button) return;
+        const hasKey = Boolean(state.mapTilerKey);
+        button.classList.toggle("has-maptiler-key", hasKey);
+        button.setAttribute("aria-pressed", String(hasKey));
+        button.title = hasKey
+          ? "MapTiler key 已保存：真实细节优先使用 outdoor-v2 + terrain-rgb-v2。"
+          : "添加 MapTiler key：真实细节优先使用 outdoor-v2 + terrain-rgb-v2。";
+      }
+
+      function updateMapTilerKeyDialogStatus() {
+        const status = byId("maptilerKeyStatus");
+        if (!status) return;
+        status.textContent = state.mapTilerKey
+          ? "当前：MapTiler outdoor-v2 + terrain-rgb-v2，已读取本机 key。"
+          : "当前：未配置 MapTiler key，真实细节使用公开 DEM 或本地模型。";
+      }
+
+      function openMapTilerKeyDialog() {
+        if (!mapTilerKeyDialog) return;
+        mapTilerKeyInput.value = state.mapTilerKey;
+        updateMapTilerKeyDialogStatus();
+        mapTilerKeyDialog.hidden = false;
+        mapTilerKeyInput.focus();
+        mapTilerKeyInput.select();
+      }
+
+      function closeMapTilerKeyDialog() {
+        if (mapTilerKeyDialog) mapTilerKeyDialog.hidden = true;
+      }
+
+      function restartOnlineTerrainAfterKeyChange() {
+        realTerrainLoadToken += 1;
+        destroyRealTerrainMap();
+        if (state.idealMode) {
+          setRealTerrainStatus("idle", "教学同源模型");
+          return;
+        }
+        setRealTerrainStatus("idle", state.mapTilerKey ? "MapTiler key 已保存" : "本地真实细节");
+        showOnlineTerrain(state.terrain);
+      }
+
+      function saveMapTilerKey() {
+        state.mapTilerKey = sanitizeMapTilerKey(mapTilerKeyInput.value);
+        writeMapTilerKey(state.mapTilerKey);
+        updateMapTilerKeyButton();
+        updateMapTilerKeyDialogStatus();
+        closeMapTilerKeyDialog();
+        restartOnlineTerrainAfterKeyChange();
+      }
+
+      function clearMapTilerKey() {
+        state.mapTilerKey = "";
+        mapTilerKeyInput.value = "";
+        writeMapTilerKey("");
+        updateMapTilerKeyButton();
+        updateMapTilerKeyDialogStatus();
+        restartOnlineTerrainAfterKeyChange();
+      }
+
       function setRealTerrainStatus(status, message) {
         state.realTerrainStatus = status;
         state.realTerrainMessage = message;
@@ -1491,6 +1748,8 @@
       }
 
       function createMapLibreStyle(demSource) {
+        if (demSource.styleUrl) return demSource.styleUrl;
+        const sourceId = terrainSourceId(demSource);
         const terrainSource = {
           type: "raster-dem",
           url: demSource.url,
@@ -1506,7 +1765,7 @@
               tileSize: 256,
               attribution: "© OpenStreetMap contributors",
             },
-            terrain: terrainSource,
+            [sourceId]: terrainSource,
           },
           layers: [
             {
@@ -1523,7 +1782,7 @@
             {
               id: "terrain-hillshade",
               type: "hillshade",
-              source: "terrain",
+              source: sourceId,
               paint: {
                 "hillshade-shadow-color": "#22332d",
                 "hillshade-highlight-color": "#f3dfb4",
@@ -1536,6 +1795,19 @@
         };
       }
 
+      function addTerrainSourceToLoadedStyle(map, source) {
+        const sourceId = terrainSourceId(source);
+        if (map.getSource(sourceId)) return sourceId;
+        const terrainSource = {
+          type: "raster-dem",
+          url: source.url,
+          tileSize: source.tileSize || 256,
+        };
+        if (source.encoding) terrainSource.encoding = source.encoding;
+        map.addSource(sourceId, terrainSource);
+        return sourceId;
+      }
+
       function destroyRealTerrainMap() {
         if (!realTerrainMapInstance) return;
         try {
@@ -1544,9 +1816,10 @@
           // The local Three.js fallback remains available even if cleanup is noisy.
         }
         realTerrainMapInstance = null;
+        realTerrainSourceId = "terrain";
       }
 
-      function waitForOnlineTerrain(map, token) {
+      function waitForOnlineTerrain(map, token, source) {
         return new Promise((resolve, reject) => {
           const timer = window.setTimeout(() => {
             cleanup();
@@ -1563,7 +1836,7 @@
           }
           function onError(event) {
             const sourceId = event && (event.sourceId || event.sourceID);
-            if (sourceId && sourceId !== "terrain" && sourceId !== "osm") return;
+            if (!source.styleUrl && sourceId && sourceId !== terrainSourceId(source) && sourceId !== "osm") return;
             cleanup();
             reject(event && event.error ? event.error : new Error("MapLibre source error"));
           }
@@ -1576,9 +1849,8 @@
         });
       }
 
-      async function initRealTerrainMap(type, sourceIndex, token) {
+      async function initRealTerrainMap(type, source, token) {
         if (!realTerrainMap || !window.maplibregl) throw new Error("MapLibre container unavailable");
-        const source = REAL_TERRAIN_DEM_SOURCES[sourceIndex];
         const view = realTerrainViewpoint(type);
         destroyRealTerrainMap();
         realTerrainMapInstance = new maplibregl.Map({
@@ -1594,12 +1866,14 @@
         realTerrainMapInstance.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
         realTerrainMapInstance.on("load", function () {
           if (!realTerrainMapInstance || token !== realTerrainLoadToken) return;
-          realTerrainMapInstance.setTerrain({ source: "terrain", exaggeration: view.exaggeration });
+          const sourceId = addTerrainSourceToLoadedStyle(realTerrainMapInstance, source);
+          realTerrainSourceId = sourceId;
+          realTerrainMapInstance.setTerrain({ source: sourceId, exaggeration: view.exaggeration });
         });
         realTerrainMapInstance.on("webglcontextlost", function () {
           fallbackToLocalRealTerrain("MapLibre WebGL context lost");
         });
-        await waitForOnlineTerrain(realTerrainMapInstance, token);
+        await waitForOnlineTerrain(realTerrainMapInstance, token, source);
         if (token !== realTerrainLoadToken) throw new Error("stale MapLibre request");
         realTerrainMapInstance.resize();
       }
@@ -1616,17 +1890,19 @@
         try {
           await loadMapLibreAssets();
           if (token !== realTerrainLoadToken) return;
-          for (let index = 0; index < REAL_TERRAIN_DEM_SOURCES.length; index += 1) {
+          const sources = onlineTerrainSources();
+          for (let index = 0; index < sources.length; index += 1) {
+            const source = sources[index];
             try {
-              setRealTerrainStatus("loading", `正在连接${REAL_TERRAIN_DEM_SOURCES[index].label}`);
-              await initRealTerrainMap(type, index, token);
+              setRealTerrainStatus("loading", `正在连接${source.label}`);
+              await initRealTerrainMap(type, source, token);
               if (token !== realTerrainLoadToken) return;
-              setRealTerrainStatus("online", "在线真实地形");
+              setRealTerrainStatus("online", source.usesPrivateKey ? "MapTiler 真实地形" : "在线真实地形");
               return;
             } catch (error) {
               if (token !== realTerrainLoadToken) return;
               destroyRealTerrainMap();
-              if (index === REAL_TERRAIN_DEM_SOURCES.length - 1) throw error;
+              if (index === sources.length - 1) throw error;
             }
           }
         } catch (error) {
@@ -1650,7 +1926,7 @@
               pitch: view.pitch,
               bearing: view.bearing,
             });
-            realTerrainMapInstance.setTerrain({ source: "terrain", exaggeration: view.exaggeration });
+            realTerrainMapInstance.setTerrain({ source: realTerrainSourceId, exaggeration: view.exaggeration });
             realTerrainMapInstance.resize();
           }
           return;
@@ -3476,11 +3752,22 @@
 
         contourCanvas.addEventListener("click", handleContourClick);
         referenceCanvas.addEventListener("click", openReferenceLightbox);
+        byId("maptilerKeyButton").addEventListener("click", openMapTilerKeyDialog);
+        byId("closeMapTilerKeyDialog").addEventListener("click", closeMapTilerKeyDialog);
+        byId("saveMapTilerKey").addEventListener("click", saveMapTilerKey);
+        byId("clearMapTilerKey").addEventListener("click", clearMapTilerKey);
+        mapTilerKeyInput.addEventListener("keydown", function (event) {
+          if (event.key === "Enter") saveMapTilerKey();
+        });
+        mapTilerKeyDialog.addEventListener("click", function (event) {
+          if (event.target === mapTilerKeyDialog) closeMapTilerKeyDialog();
+        });
         byId("closeReferenceLightbox").addEventListener("click", closeReferenceLightbox);
         referenceLightbox.addEventListener("click", function (event) {
           if (event.target === referenceLightbox) closeReferenceLightbox();
         });
         document.addEventListener("keydown", function (event) {
+          if (event.key === "Escape" && !mapTilerKeyDialog.hidden) closeMapTilerKeyDialog();
           if (event.key === "Escape" && !referenceLightbox.hidden) closeReferenceLightbox();
         });
 
@@ -3551,6 +3838,7 @@
       updateWorkspaceLayout();
       updateVisualModeButton();
       updateIdealModeButton();
+      updateMapTilerKeyButton();
       setMobilePanel(state.mobilePanel);
       bindEvents();
       initThree();
